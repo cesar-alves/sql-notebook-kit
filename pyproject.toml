@@ -1,0 +1,23 @@
+[project]
+name = "redshift-notebooks"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "SQL-cell notebooks for Redshift: a connection-agnostic jupysql/SQLAlchemy core, plus an optional SSO adapter."
+# sqlalchemy-redshift>=1.0.0 is what added SQLAlchemy 2.0 support, which in
+# turn is what lets pandas>=2.2 use its SQLAlchemy read_sql/to_sql path.
+dependencies = [
+    "sqlalchemy>=2.0.36,<3.0",
+    "sqlalchemy-redshift>=1.0.0,<2.0",
+    "jupysql>=0.11",
+    "pandas>=2.2,<3.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ipython>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

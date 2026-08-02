@@ -1,0 +1,26 @@
+# Local/scratch data (not for version control)
+local/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# LLM / assistant settings
+.claude/
+CLAUDE.local.md
+.cursor/
+.aider*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
