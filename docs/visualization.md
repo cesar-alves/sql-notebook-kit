@@ -7,8 +7,9 @@ uv pip install -e '.[viz]'
 ```
 
 The visualization extra supports pandas 3.0.5 or newer within the pandas 3
-release series. JupyterLab 4 metadata support is bundled with the Python wheel.
-VS Code additionally requires the `redshift-notebooks-vscode` companion VSIX.
+release series and installs `nbformat` for Plotly notebook MIME rendering.
+JupyterLab 4 metadata support is bundled with the Python wheel. VS Code
+additionally requires the `redshift-notebooks-vscode` companion VSIX.
 
 With `visualization=True`, every `%%sql` result becomes a bounded
 `NotebookResult`. Its first tab is the unmodified local table. Use **Add

@@ -28,6 +28,7 @@ class _NotebookState:
 def _visualization_available() -> bool:
     try:
         import ipywidgets  # noqa: F401
+        import nbformat  # noqa: F401
         import pandas  # noqa: F401
         import plotly  # noqa: F401
     except ImportError:

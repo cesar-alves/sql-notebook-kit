@@ -1,10 +1,11 @@
+import builtins
 import sqlite3
 
 import pandas as pd
 import pytest
 
 from redshift_notebooks.engine import make_engine, register
-from redshift_notebooks.notebook import _is_database_execution_error
+from redshift_notebooks.notebook import _is_database_execution_error, _visualization_available
 from redshift_notebooks.results import NotebookResult
 from redshift_notebooks.session import create_session
 
@@ -92,6 +93,18 @@ def test_register_requires_an_ipython_session():
     with pytest.raises(RuntimeError):
         register(engine)
     engine.dispose()
+
+
+def test_visualization_availability_requires_nbformat(monkeypatch):
+    original_import = builtins.__import__
+
+    def import_without_nbformat(name, *args, **kwargs):
+        if name == "nbformat":
+            raise ModuleNotFoundError(name)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_nbformat)
+    assert _visualization_available() is False
 
 
 def test_register_wires_up_sql_magic_end_to_end():

@@ -2605,6 +2605,7 @@ dependencies = [
 [package.optional-dependencies]
 all = [
     { name = "ipywidgets" },
+    { name = "nbformat" },
     { name = "pandas" },
     { name = "plotly" },
     { name = "redshift-connector" },
@@ -2616,6 +2617,7 @@ redshift = [
 ]
 viz = [
     { name = "ipywidgets" },
+    { name = "nbformat" },
     { name = "pandas" },
     { name = "plotly" },
 ]
@@ -2625,6 +2627,7 @@ dev = [
     { name = "build" },
     { name = "ipywidgets" },
     { name = "mypy" },
+    { name = "nbformat" },
     { name = "pandas" },
     { name = "plotly" },
     { name = "pytest" },
@@ -2646,6 +2649,8 @@ requires-dist = [
     { name = "ipywidgets", marker = "extra == 'all'", specifier = ">=8,<9" },
     { name = "ipywidgets", marker = "extra == 'viz'", specifier = ">=8,<9" },
     { name = "jupysql", specifier = ">=0.11,<0.12" },
+    { name = "nbformat", marker = "extra == 'all'", specifier = ">=5.10,<6" },
+    { name = "nbformat", marker = "extra == 'viz'", specifier = ">=5.10,<6" },
     { name = "pandas", marker = "extra == 'all'", specifier = ">=3.0.5,<4" },
     { name = "pandas", marker = "extra == 'viz'", specifier = ">=3.0.5,<4" },
     { name = "plotly", marker = "extra == 'all'", specifier = ">=5.24,<7" },
@@ -2663,6 +2668,7 @@ dev = [
     { name = "build", specifier = ">=1.2" },
     { name = "ipywidgets", specifier = ">=8,<9" },
     { name = "mypy", specifier = ">=1.14" },
+    { name = "nbformat", specifier = ">=5.10,<6" },
     { name = "pandas", specifier = ">=3.0.5,<4" },
     { name = "plotly", specifier = ">=5.24,<7" },
     { name = "pytest", specifier = ">=8.0" },
