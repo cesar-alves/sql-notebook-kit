@@ -8,6 +8,8 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy.exc import DBAPIError
+
 from redshift_notebooks.errors import ConfigurationError
 from redshift_notebooks.results import NotebookResult
 
@@ -16,8 +18,11 @@ _ALIAS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 
 @dataclass(slots=True)
 class _NotebookState:
+    alias: str
+    engine: Any
     max_rows: int
     allow_large_results: bool
+    detach_results: bool
 
 
 def _visualization_available() -> bool:
@@ -59,7 +64,43 @@ def _detach_result(raw: Any, max_rows: int) -> NotebookResult | Any:
     )
 
 
-def _install_bounded_sql_magic(ipython: Any, state: _NotebookState) -> None:
+def _is_database_execution_error(exc: BaseException) -> bool:
+    """Return whether an exception chain contains a SQLAlchemy DBAPI error."""
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if isinstance(current, DBAPIError):
+            return True
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        if current.__context__ is not None:
+            pending.append(current.__context__)
+    return False
+
+
+def _rollback_registered_connection(state: _NotebookState) -> None:
+    """Roll back this session's long-lived JupySQL SQLAlchemy checkout."""
+    from sql.connection import ConnectionManager
+
+    registered = ConnectionManager.connections.get(state.alias)
+    connection = getattr(registered, "connection_sqlalchemy", None)
+    if connection is None or getattr(connection, "engine", None) is not state.engine:
+        return
+    try:
+        connection.rollback()
+    except Exception as exc:
+        warnings.warn(
+            "could not roll back the failed SQL cell "
+            f"({type(exc).__name__}); call session.reconnect() before running more SQL",
+            stacklevel=3,
+        )
+
+
+def _install_session_sql_magic(ipython: Any, state: _NotebookState) -> None:
     ipython._redshift_notebooks_state = state
 
     def bounded_sql(line: str, cell: str) -> Any:
@@ -67,10 +108,18 @@ def _install_bounded_sql_magic(ipython: Any, state: _NotebookState) -> None:
         jupysql_magic = ipython.find_cell_magic("jupysql")
         magic_owner = jupysql_magic.__self__
         old_autolimit = magic_owner.autolimit
-        magic_owner.autolimit = active_state.max_rows + 1
+        if active_state.detach_results:
+            magic_owner.autolimit = active_state.max_rows + 1
         try:
-            raw = ipython.run_cell_magic("jupysql", line, cell)
-            return _detach_result(raw, active_state.max_rows)
+            try:
+                raw = ipython.run_cell_magic("jupysql", line, cell)
+            except Exception as exc:
+                if _is_database_execution_error(exc):
+                    _rollback_registered_connection(active_state)
+                raise
+            if active_state.detach_results:
+                return _detach_result(raw, active_state.max_rows)
+            return raw
         finally:
             magic_owner.autolimit = old_autolimit
 
@@ -107,19 +156,24 @@ def register_session(
     line = f"--alias {alias} {variable}" if alias else variable
     ipython.run_line_magic("sql", line)
 
-    if visualization:
-        if _visualization_available():
-            _install_bounded_sql_magic(
-                ipython,
-                _NotebookState(max_rows=max_rows, allow_large_results=allow_large_results),
-            )
-        else:
-            warnings.warn(
-                "visualization extras are not installed; SQL results will use "
-                "JupySQL's table output. "
-                "Install 'redshift-notebooks[viz]' to enable the chart builder.",
-                stacklevel=2,
-            )
+    detach_results = visualization and _visualization_available()
+    if visualization and not detach_results:
+        warnings.warn(
+            "visualization extras are not installed; SQL results will use "
+            "JupySQL's table output. "
+            "Install 'redshift-notebooks[viz]' to enable the chart builder.",
+            stacklevel=2,
+        )
+    _install_session_sql_magic(
+        ipython,
+        _NotebookState(
+            alias=alias or str(session.engine.url),
+            engine=session.engine,
+            max_rows=max_rows,
+            allow_large_results=allow_large_results,
+            detach_results=detach_results,
+        ),
+    )
 
 
 def close_registered_session(alias: str) -> None:

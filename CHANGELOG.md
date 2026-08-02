@@ -8,3 +8,5 @@
 - Require pandas 3.0.5 or newer for visualization and cover pandas 3 dtype,
   copy-on-write, aggregation, export, and rendering behavior.
 - Add reusable factory contract testing, public API documentation, and package quality gates.
+- Roll back failed managed `%%sql` transactions so one SQL error does not poison
+  the rest of the notebook session.

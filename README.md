@@ -82,7 +82,9 @@ session.dispose()     # close JupySQL and pooled resources
 ```
 
 Failed SQL statements are never automatically replayed. This avoids repeating
-writes after an ambiguous network failure.
+writes after an ambiguous network failure. When a managed `%%sql` cell reaches
+the database and fails, its active transaction is rolled back so later cells
+can continue. This also ends any explicit transaction opened across cells.
 
 ## Compatibility APIs
 

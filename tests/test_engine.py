@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from redshift_notebooks.engine import make_engine, register
+from redshift_notebooks.notebook import _is_database_execution_error
 from redshift_notebooks.results import NotebookResult
 from redshift_notebooks.session import create_session
 
@@ -14,6 +15,47 @@ def _sqlite_factory(calls):
         return sqlite3.connect(":memory:")
 
     return factory
+
+
+class _PoisoningCursor:
+    def __init__(self, owner, cursor):
+        self._owner = owner
+        self._cursor = cursor
+
+    def execute(self, sql, *args, **kwargs):
+        if self._owner.poisoned:
+            raise sqlite3.OperationalError(
+                "current transaction is aborted, commands ignored until end of transaction block"
+            )
+        try:
+            return self._cursor.execute(sql, *args, **kwargs)
+        except sqlite3.Error:
+            self._owner.poisoned = True
+            raise
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+
+class _PoisoningConnection:
+    def __init__(self, *, fail_recovery=False):
+        self._connection = sqlite3.connect(":memory:")
+        self.fail_recovery = fail_recovery
+        self.poisoned = False
+        self.rollback_calls = 0
+
+    def cursor(self, *args, **kwargs):
+        return _PoisoningCursor(self, self._connection.cursor(*args, **kwargs))
+
+    def rollback(self):
+        self.rollback_calls += 1
+        if self.poisoned and self.fail_recovery:
+            raise sqlite3.OperationalError("rollback failed")
+        self.poisoned = False
+        return self._connection.rollback()
+
+    def __getattr__(self, name):
+        return getattr(self._connection, name)
 
 
 def test_make_engine_wraps_arbitrary_connection_factory():
@@ -93,4 +135,48 @@ def test_session_wraps_sql_cell_results_with_a_bounded_dataframe():
     assert bounded_result.truncated is True
     session.reconnect()
     assert len(calls) == 2
+    session.dispose()
+
+
+@pytest.mark.parametrize("visualization", [False, True])
+def test_failed_sql_cell_rolls_back_before_the_next_cell(visualization):
+    ipython_testing = pytest.importorskip("IPython.testing.globalipapp")
+    shell = ipython_testing.get_ipython()
+    connection = _PoisoningConnection()
+    session = create_session(factory=lambda: connection, dialect="sqlite")
+    alias = f"recovery_{visualization}"
+    session.register(alias=alias, visualization=visualization, max_rows=1)
+    rollback_calls_before_error = connection.rollback_calls
+
+    with pytest.raises(Exception, match="missing_table"):
+        shell.run_cell_magic("sql", "", "select * from missing_table")
+
+    assert connection.rollback_calls == rollback_calls_before_error + 1
+    assert connection.poisoned is False
+    result = shell.run_cell_magic(
+        "sql", "", "select 1 as value union all select 2 order by value"
+    )
+    frame = result.dataframe if isinstance(result, NotebookResult) else result.DataFrame()
+    assert frame["value"].tolist() == ([1] if visualization else [1, 2])
+    session.dispose()
+
+
+def test_non_database_errors_do_not_trigger_sql_recovery():
+    assert _is_database_execution_error(ValueError("not a database error")) is False
+
+
+def test_rollback_failure_warns_without_replacing_the_sql_error():
+    ipython_testing = pytest.importorskip("IPython.testing.globalipapp")
+    shell = ipython_testing.get_ipython()
+    connection = _PoisoningConnection(fail_recovery=True)
+    session = create_session(factory=lambda: connection, dialect="sqlite")
+    session.register(alias="failed_recovery", visualization=False)
+
+    with (
+        pytest.warns(UserWarning, match=r"could not roll back.*session\.reconnect"),
+        pytest.raises(Exception, match="missing_table"),
+    ):
+        shell.run_cell_magic("sql", "", "select * from missing_table")
+
+    connection.fail_recovery = False
     session.dispose()
