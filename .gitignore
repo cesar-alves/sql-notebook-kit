@@ -8,6 +8,10 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+dist/
+site/
 
 # Virtual environments
 .venv/

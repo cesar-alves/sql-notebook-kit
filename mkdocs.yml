@@ -1,0 +1,23 @@
+site_name: redshift-notebooks
+site_description: Factory-backed SQL cells and bounded visualization for Redshift notebooks
+repo_url: https://github.com/cesar-alves/redshift-notebooks
+strict: true
+nav:
+  - Home: index.md
+  - Factory contract: factory-contract.md
+  - SSO guide: sso.md
+  - Visualization: visualization.md
+  - Troubleshooting: troubleshooting.md
+  - API reference: api.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_source: false
+markdown_extensions:
+  - admonition
+  - fenced_code
+  - tables

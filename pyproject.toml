@@ -1,22 +1,108 @@
 [project]
 name = "redshift-notebooks"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "SQL-cell notebooks for Redshift: a connection-agnostic jupysql/SQLAlchemy core, plus an optional SSO adapter."
-# sqlalchemy-redshift>=1.0.0 is what added SQLAlchemy 2.0 support, which in
-# turn is what lets pandas>=2.2 use its SQLAlchemy read_sql/to_sql path.
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Jupyter",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
 dependencies = [
+    "ipython>=8,<10",
     "sqlalchemy>=2.0.36,<3.0",
-    "sqlalchemy-redshift>=1.0.0,<2.0",
-    "jupysql>=0.11",
-    "pandas>=2.2,<3.0",
+    "jupysql>=0.11,<0.12",
 ]
 
+[project.optional-dependencies]
+redshift = [
+    "sqlalchemy-redshift>=1.0.0,<2.0",
+    "redshift-connector>=2.1.3,<3.0",
+]
+viz = [
+    "ipywidgets>=8,<9",
+    "pandas>=3.0.5,<4",
+    "plotly>=5.24,<7",
+]
+all = [
+    "sqlalchemy-redshift>=1.0.0,<2.0",
+    "redshift-connector>=2.1.3,<3.0",
+    "ipywidgets>=8,<9",
+    "pandas>=3.0.5,<4",
+    "plotly>=5.24,<7",
+]
+
+[project.urls]
+Repository = "https://github.com/cesar-alves/redshift-notebooks"
+Issues = "https://github.com/cesar-alves/redshift-notebooks/issues"
+
 [dependency-groups]
-dev = ["pytest>=8.0", "ipython>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.9",
+    "mypy>=1.14",
+    "build>=1.2",
+    "twine>=6.0",
+    "pandas>=3.0.5,<4",
+    "plotly>=5.24,<7",
+    "ipywidgets>=8,<9",
+]
+docs = [
+    "mkdocs>=1.6,<2",
+    "mkdocstrings[python]>=0.27,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["redshift_notebooks"]
+
+[tool.hatch.build]
+include = [
+    "redshift_notebooks/**/*.py",
+    "redshift_notebooks/py.typed",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/**/*.md",
+    "examples/*.ipynb",
+    "mkdocs.yml",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["examples/*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[tool.coverage.run]
+branch = true
+source = ["redshift_notebooks"]
+
+[tool.coverage.report]
+fail_under = 75
+show_missing = true
 
 [build-system]
 requires = ["hatchling"]

@@ -10,10 +10,15 @@ socket, ...), not just plain user/password DSNs.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+import re
+from collections.abc import Callable
+from typing import Any
 
 import sqlalchemy
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.exc import NoSuchModuleError
+from sqlalchemy.pool import QueuePool
+
+from redshift_notebooks.errors import ConfigurationError, MissingOptionalDependencyError
 
 ConnectionFactory = Callable[[], Any]
 
@@ -23,20 +28,33 @@ DEFAULT_DIALECT = "redshift+redshift_connector"
 def make_engine(
     connection_factory: ConnectionFactory,
     dialect: str = DEFAULT_DIALECT,
+    *,
+    pool_timeout: float = 30.0,
 ) -> sqlalchemy.engine.Engine:
     """Build a SQLAlchemy Engine around an existing DBAPI connection factory.
 
-    ``connection_factory`` is called lazily, on first use, and again only if
-    the pooled connection is found dead (``pool_pre_ping``) — matching a
-    notebook's "log in once, reuse for the session" expectation instead of
-    SQLAlchemy's default multi-connection pool.
+    ``connection_factory`` is called lazily and again after invalidation. The
+    one-connection queue serializes checkouts instead of handing the same DBAPI
+    connection to concurrent callers, while retaining a notebook's "log in
+    once, reuse for the session" behavior.
     """
-    return sqlalchemy.create_engine(
-        f"{dialect}://",
-        creator=connection_factory,
-        poolclass=StaticPool,
-        pool_pre_ping=True,
-    )
+    try:
+        return sqlalchemy.create_engine(
+            f"{dialect}://",
+            creator=connection_factory,
+            poolclass=QueuePool,
+            pool_size=1,
+            max_overflow=0,
+            pool_timeout=pool_timeout,
+            pool_pre_ping=True,
+        )
+    except (ImportError, NoSuchModuleError) as exc:
+        if dialect == DEFAULT_DIALECT:
+            raise MissingOptionalDependencyError(
+                "the Redshift dialect requires the optional driver; install "
+                "'redshift-notebooks[redshift]'"
+            ) from exc
+        raise
 
 
 def register(engine: sqlalchemy.engine.Engine, alias: str | None = None) -> None:
@@ -50,8 +68,11 @@ def register(engine: sqlalchemy.engine.Engine, alias: str | None = None) -> None
     ipython = get_ipython()
     if ipython is None:
         raise RuntimeError("register() must be called from within an IPython/Jupyter session")
+    if alias is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", alias):
+        raise ConfigurationError("alias contains characters that are unsafe in an IPython magic")
 
-    ipython.push({"_redshift_notebooks_engine": engine})
-    ipython.run_line_magic("load_ext", "sql")
-    line = "--alias " + alias + " _redshift_notebooks_engine" if alias else "_redshift_notebooks_engine"
+    variable = f"_redshift_notebooks_engine_{id(engine):x}"
+    ipython.push({variable: engine})
+    ipython.extension_manager.load_extension("sql")
+    line = "--alias " + alias + " " + variable if alias else variable
     ipython.run_line_magic("sql", line)

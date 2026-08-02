@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      - run: uv run pytest --cov --cov-report=term-missing
+
+  quality:
+    name: Package and documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      - run: uv run ruff check .
+      - run: uv run mypy redshift_notebooks
+      - run: uv run --group docs mkdocs build --strict
+      - run: uv build
+      - run: uv run twine check dist/*
+
+  pandas-minimum:
+    name: pandas 3.0.5 compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      - run: uv run --with 'pandas==3.0.5' python -c 'import pandas; assert pandas.__version__ == "3.0.5"'
+      - run: uv run --with 'pandas==3.0.5' python -W error::FutureWarning -m pytest tests/test_visualize.py tests/test_engine.py

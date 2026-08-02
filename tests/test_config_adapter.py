@@ -21,9 +21,7 @@ def _capture_connection_factory(monkeypatch):
     monkeypatch.setattr(
         config,
         "make_engine",
-        lambda connection_factory, dialect=None: captured.setdefault(
-            "factory", connection_factory
-        ),
+        lambda connection_factory, dialect=None: captured.setdefault("factory", connection_factory),
     )
     return captured
 
@@ -73,10 +71,10 @@ def test_config_file_used_when_no_arg_or_env(monkeypatch, tmp_path):
     monkeypatch.delenv("REDSHIFT_NOTEBOOKS_FACTORY", raising=False)
     config_path = tmp_path / "config.toml"
     config_path.write_text(
-        '[connection]\n'
+        "[connection]\n"
         'factory = "fake_conn_pkg:get_connection"\n'
-        '\n'
-        '[connection.kwargs]\n'
+        "\n"
+        "[connection.kwargs]\n"
         'db_user = "file-user"\n'
         'preferred_role = "analyst"\n'
     )
@@ -95,10 +93,10 @@ def test_kwarg_env_var_overrides_config_file_kwarg(monkeypatch, tmp_path):
     monkeypatch.delenv("REDSHIFT_NOTEBOOKS_FACTORY", raising=False)
     config_path = tmp_path / "config.toml"
     config_path.write_text(
-        '[connection]\n'
+        "[connection]\n"
         'factory = "fake_conn_pkg:get_connection"\n'
-        '\n'
-        '[connection.kwargs]\n'
+        "\n"
+        "[connection.kwargs]\n"
         'db_user = "file-user"\n'
     )
     monkeypatch.setenv("REDSHIFT_NOTEBOOKS_CONFIG", str(config_path))
