@@ -10,3 +10,9 @@
 - Add reusable factory contract testing, public API documentation, and package quality gates.
 - Roll back failed managed `%%sql` transactions so one SQL error does not poison
   the rest of the notebook session.
+- Replace the alpha single-chart editor with a registry-backed workspace for
+  twelve visualization types, strict versioned specifications, deterministic
+  local transformations, named collection CRUD, live themes, and safe schema
+  drift handling.
+- Bundle a JupyterLab 4 metadata/theme companion and add a VS Code companion
+  package using the shared revisioned persistence protocol.

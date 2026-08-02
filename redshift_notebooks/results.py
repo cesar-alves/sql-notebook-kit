@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -25,20 +25,41 @@ class NotebookResult:
     raw: Any
     truncated: bool = False
     max_rows: int = 10_000
-    chart: Any = None
+    cell_id: str | None = None
+    _visualizations: Any = field(default=None, init=False, repr=False)
+    _workspace: Any = field(default=None, init=False, repr=False)
 
-    def visualize(self, spec: Any = None) -> Any:
-        """Build an interactive Plotly/ipywidgets editor for this result."""
+    @property
+    def visualizations(self) -> Any:
+        """Return this result's lazily created visualization collection manager."""
+        if self._visualizations is None:
+            try:
+                from redshift_notebooks.visualize import VisualizationManager
+            except ImportError as exc:
+                raise MissingOptionalDependencyError(
+                    "visualization requires 'redshift-notebooks[viz]'"
+                ) from exc
+            self._visualizations = VisualizationManager(self)
+        return self._visualizations
+
+    def visualize(self, id_or_name: str | None = None) -> Any:
+        """Build the workspace and optionally activate a named visualization."""
         try:
-            from redshift_notebooks.visualize import ChartSpec, build_chart_builder
+            from redshift_notebooks.visualize import build_workspace
         except ImportError as exc:
             raise MissingOptionalDependencyError(
                 "visualization requires 'redshift-notebooks[viz]'"
             ) from exc
-        if spec is None:
-            spec = ChartSpec.infer(self.dataframe)
-        self.chart = build_chart_builder(self, spec)
-        return self.chart
+        if id_or_name is not None:
+            self.visualizations.activate(id_or_name)
+        if self._workspace is None:
+            try:
+                self._workspace = build_workspace(self)
+            except ImportError as exc:
+                raise MissingOptionalDependencyError(
+                    "visualization requires 'redshift-notebooks[viz]'"
+                ) from exc
+        return self._workspace
 
     def to_csv(self, path: str | Path | None = None, **kwargs: Any) -> str | None:
         """Export the bounded local data, never rows that were not fetched."""
@@ -51,7 +72,7 @@ class NotebookResult:
         banner = ""
         if self.truncated:
             banner = (
-                "<div style='padding:8px;background:#fff3cd;border:1px solid #ffe69c'>"
+                "<div class='rn-result-warning'>"
                 f"Result truncated to {self.max_rows:,} local rows. Visual filters and "
                 "aggregations do not include unfetched rows.</div>"
             )

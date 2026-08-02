@@ -28,3 +28,27 @@ class NotebookConnectionError(RedshiftNotebooksError):
 
 class MissingOptionalDependencyError(RedshiftNotebooksError, ImportError):
     """An optional package extra is required for the requested feature."""
+
+
+class VisualizationError(RedshiftNotebooksError):
+    """Base class for visualization failures."""
+
+
+class VisualizationConfigError(VisualizationError, ValueError):
+    """A visualization configuration is invalid.
+
+    ``path`` identifies the public configuration field without including data
+    values or other potentially sensitive context.
+    """
+
+    def __init__(self, message: str, *, path: str | None = None) -> None:
+        self.path = path
+        super().__init__(f"{path}: {message}" if path else message)
+
+
+class VisualizationRenderError(VisualizationError):
+    """A validated visualization could not be rendered."""
+
+
+class VisualizationPersistenceError(VisualizationError):
+    """Visualization metadata could not be loaded or saved."""

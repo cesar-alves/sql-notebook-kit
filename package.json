@@ -1,0 +1,16 @@
+{
+  "name": "redshift-notebooks-frontends",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:jupyterlab": "uv run --group frontend jupyter labextension build frontend/jupyterlab && node frontend/jupyterlab/copy-install.mjs",
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "package:vscode": "pnpm --filter redshift-notebooks-vscode package"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

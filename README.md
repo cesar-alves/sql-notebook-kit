@@ -41,10 +41,14 @@ the first query.
 select current_user, current_database()
 ```
 
-SELECT results render with **Table** and **Visualization** tabs when the `viz`
-extra is installed. The local result is bounded to 10,000 rows by default and
-clearly marked if truncated. The visualization extra requires pandas 3.0.5 or
-newer within the pandas 3 release series.
+SELECT results render as a workspace with the bounded **Table**, multiple named
+visualizations, and an **Add visualization** action when the `viz` extra is
+installed. The twelve supported types include table, Cartesian charts, bubble,
+box, pie, histogram, heatmap, combo, and counter. Applied configurations persist
+in originating-cell metadata when the bundled JupyterLab 4 companion or the
+separate VS Code companion is available; otherwise the workspace clearly uses
+session-only mode. The visualization extra requires pandas 3.0.5 or newer
+within the pandas 3 release series.
 
 ## Named profile
 
