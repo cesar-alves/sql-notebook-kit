@@ -9,6 +9,10 @@ from redshift_notebooks.errors import (
     MissingOptionalDependencyError,
     NotebookConnectionError,
     RedshiftNotebooksError,
+    VisualizationConfigError,
+    VisualizationError,
+    VisualizationPersistenceError,
+    VisualizationRenderError,
 )
 from redshift_notebooks.session import NotebookSession, create_session
 
@@ -22,6 +26,10 @@ __all__ = [
     "NotebookConnectionError",
     "NotebookSession",
     "RedshiftNotebooksError",
+    "VisualizationConfigError",
+    "VisualizationError",
+    "VisualizationPersistenceError",
+    "VisualizationRenderError",
     "create_session",
     "make_engine",
     "register",

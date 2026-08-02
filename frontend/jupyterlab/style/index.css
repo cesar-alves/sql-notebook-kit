@@ -1,0 +1,13 @@
+.rn-viz-workspace {
+  --rn-bg: var(--jp-layout-color0, #fff);
+  --rn-surface: var(--jp-layout-color1, #fff);
+  --rn-surface-muted: var(--jp-layout-color2, #f6f8fa);
+  --rn-surface-raised: var(--jp-layout-color1, #fff);
+  --rn-text: var(--jp-ui-font-color1, #1f2328);
+  --rn-text-muted: var(--jp-ui-font-color2, #57606a);
+  --rn-border: var(--jp-border-color1, #d0d7de);
+  --rn-accent: var(--jp-brand-color1, #0969da);
+  --rn-accent-hover: var(--jp-brand-color2, #0550ae);
+  --rn-focus: var(--jp-brand-color1, #0550ae);
+  --rn-danger: var(--jp-error-color1, #cf222e);
+}

@@ -12,6 +12,10 @@ __pycache__/
 htmlcov/
 dist/
 site/
+node_modules/
+frontend/*/lib/
+frontend/*/dist/
+*.vsix
 
 # Virtual environments
 .venv/

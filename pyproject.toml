@@ -8,6 +8,8 @@ license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab :: 4",
+    "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -60,13 +62,21 @@ docs = [
     "mkdocs>=1.6,<2",
     "mkdocstrings[python]>=0.27,<1",
 ]
+frontend = [
+    "jupyterlab>=4,<5",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["redshift_notebooks"]
 
+[tool.hatch.build.targets.wheel.shared-data]
+"redshift_notebooks/labextension" = "share/jupyter/labextensions/@redshift-notebooks/jupyterlab"
+
 [tool.hatch.build]
 include = [
     "redshift_notebooks/**/*.py",
+    "redshift_notebooks/**/*.css",
+    "redshift_notebooks/labextension/**/*",
     "redshift_notebooks/py.typed",
     "README.md",
     "LICENSE",
@@ -74,6 +84,10 @@ include = [
     "docs/**/*.md",
     "examples/*.ipynb",
     "mkdocs.yml",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "frontend/**/*",
 ]
 
 [tool.pytest.ini_options]

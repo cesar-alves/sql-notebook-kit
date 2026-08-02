@@ -1,119 +1,200 @@
+import json
+import uuid
+from dataclasses import replace
+
 import pandas as pd
+import plotly.io as pio
 import pytest
 
+from redshift_notebooks.errors import VisualizationConfigError
 from redshift_notebooks.results import NotebookResult
-from redshift_notebooks.visualize import ChartSpec, FilterSpec, build_figure, prepare_data
+from redshift_notebooks.visualize import (
+    FieldBinding,
+    FilterSpec,
+    ThemeContext,
+    VisualizationCollection,
+    VisualizationSpec,
+    build_figure,
+    build_plotly_template,
+    infer_visualization,
+    list_visualization_definitions,
+    prepare_data,
+)
 
 
-def test_chart_spec_infers_categorical_bar_chart():
-    frame = pd.DataFrame({"category": ["a", "b"], "amount": [1, 2]})
-    assert isinstance(frame["category"].dtype, pd.StringDtype)
-    spec = ChartSpec.infer(frame)
-    assert spec.chart_type == "bar"
-    assert spec.x == "category"
-    assert spec.y == ("amount",)
+def binding(role, column, index, **kwargs):
+    return FieldBinding(role, column, index, **kwargs)
 
 
-def test_chart_spec_infers_timezone_aware_datetime_line_chart():
+def spec(chart_type="table", fields=(), **kwargs):
+    return VisualizationSpec(1, str(uuid.uuid4()), "Example", chart_type, fields, **kwargs)
+
+
+def test_inference_uses_documented_priority_and_positions():
     frame = pd.DataFrame(
         {
             "occurred_at": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
+            "category": ["a", "b"],
             "amount": [1, 2],
         }
     )
-
-    spec = ChartSpec.infer(frame)
-
-    assert spec.chart_type == "line"
-    assert spec.x == "occurred_at"
-    assert spec.y == ("amount",)
+    inferred = infer_visualization(frame)
+    assert inferred.chart_type == "line"
+    assert [(item.role, item.column_index) for item in inferred.fields] == [("x", 0), ("y", 2)]
 
 
-def test_chart_spec_json_round_trip_and_code_generation():
-    spec = ChartSpec(
-        chart_type="bar",
-        x="category",
-        y=("amount",),
-        filters=(FilterSpec("category", "in", ["a", "b"]),),
+def test_public_specs_round_trip_and_reject_unknown_or_non_finite_values():
+    original = spec(
+        "bar",
+        (binding("x", "category", 0), binding("y", "amount", 1, aggregation="sum")),
+        filters=(FilterSpec("category", 0, "in", ["a", "b"]),),
+        options={"limit": 10},
     )
-    restored = ChartSpec.from_json(spec.to_json())
-    assert restored == spec
-    assert "ChartSpec.from_json" in spec.to_code()
+    assert VisualizationSpec.from_json(original.to_json()) == original
+    value = json.loads(original.to_json())
+    value["unknown"] = True
+    with pytest.raises(VisualizationConfigError, match="unknown key"):
+        VisualizationSpec.from_dict(value)
+    with pytest.raises(VisualizationConfigError, match="finite"):
+        replace(original, options={"value": float("nan")})
 
 
-def test_prepare_data_filters_aggregates_sorts_and_limits():
-    frame = pd.DataFrame({"category": ["a", "a", "b", "c"], "amount": [1, 2, 10, 100]})
-    spec = ChartSpec(
-        chart_type="bar",
-        x="category",
-        y=("amount",),
-        aggregation="sum",
-        filters=(FilterSpec("category", "ne", "c"),),
-        sort_by="amount",
-        sort_descending=True,
-        limit=1,
-    )
-    result = prepare_data(frame, spec)
-    assert result.to_dict("records") == [{"category": "b", "amount": 10}]
+def test_collection_validation_and_size_constraints():
+    item = spec()
+    collection = VisualizationCollection(1, 2, item.id, (item,))
+    assert VisualizationCollection.from_json(collection.to_json()) == collection
+    with pytest.raises(VisualizationConfigError, match="IDs must be unique"):
+        VisualizationCollection(1, 0, None, (item, item))
 
 
-def test_prepare_data_handles_nullable_strings_values_and_groups():
+def test_registry_has_unique_complete_phase_one_types():
+    definitions = list_visualization_definitions()
+    assert {item.id for item in definitions} == {
+        "table",
+        "bar",
+        "line",
+        "area",
+        "scatter",
+        "bubble",
+        "box",
+        "pie",
+        "histogram",
+        "heatmap",
+        "combo",
+        "counter",
+    }
+    assert len(definitions) == len({item.id for item in definitions})
+
+
+def test_prepare_data_filters_buckets_aggregates_sorts_limits_without_mutation():
     frame = pd.DataFrame(
         {
-            "category": ["alpha", None, "beta", "alphabet"],
-            "amount": pd.array([1, 2, None, 4], dtype="Int64"),
+            "when": pd.to_datetime(["2026-01-01", "2026-01-15", "2026-02-01"]),
+            "amount": pd.array([1, 2, 10], dtype="Int64"),
         }
     )
-    filtered = prepare_data(
-        frame,
-        ChartSpec(filters=(FilterSpec("category", "contains", "alpha"),)),
-    )
-    grouped = prepare_data(
-        frame,
-        ChartSpec(x="category", aggregation="count"),
-    )
-
-    assert filtered["category"].tolist() == ["alpha", "alphabet"]
-    assert grouped["count"].sum() == 4
-    assert grouped["category"].isna().sum() == 1
-
-
-def test_prepare_data_does_not_mutate_source_under_copy_on_write():
-    frame = pd.DataFrame({"category": ["a", "b"], "amount": [2, 1]})
     original = frame.copy()
-
-    prepared = prepare_data(
-        frame,
-        ChartSpec(sort_by="amount", sort_descending=True, limit=1),
+    chart = spec(
+        "line",
+        (
+            binding("x", "when", 0, date_grain="month"),
+            binding("y", "amount", 1, aggregation="sum"),
+        ),
+        filters=(FilterSpec("amount", 1, "greater_or_equal", 2),),
+        options={
+            "missing_value_policy": "hide",
+            "sort_by": "amount",
+            "sort_direction": "descending",
+            "limit": 1,
+        },
     )
-    prepared.loc[prepared.index[0], "amount"] = 99
-
+    prepared = prepare_data(frame, chart)
+    assert prepared.source_rows == 3
+    assert prepared.filtered_rows == 2
+    assert prepared.plotted_rows == 1
+    assert prepared.frame.iloc[0, -1] == 10
     pd.testing.assert_frame_equal(frame, original)
 
 
-def test_notebook_result_exports_and_renders_pandas_3_data():
+def test_literal_string_filter_and_duplicate_non_string_column_resolution():
+    frame = pd.DataFrame([["a.b", 1, 2], ["axb", 3, 4]], columns=[7, "value", "value"])
+    chart = spec(
+        "table",
+        (binding("visible", "value", 2),),
+        filters=(FilterSpec("7", 0, "contains", "."),),
+        options={},
+    )
+    prepared = prepare_data(frame, chart)
+    assert prepared.frame.iloc[:, 0].tolist() == ["a.b"]
+    assert prepared.frame.iloc[:, 1].tolist() == [2]
+    with pytest.raises(VisualizationConfigError, match="moved or was replaced"):
+        prepare_data(frame.iloc[:, [1, 0, 2]], chart)
+
+
+def test_manager_crud_import_and_session_dirty_fallback():
+    result = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
+    first = spec("histogram", (binding("value", "value", 0),))
+    result.visualizations.add(first)
+    assert result.visualizations.get(first.id) == first
+    assert result.visualizations.dirty
+    renamed = result.visualizations.rename(first.id, "Renamed")
+    copied = result.visualizations.duplicate(renamed.id)
+    assert copied.name == "Renamed copy"
+    exported = result.visualizations.export_json()
+    other = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
+    imported = other.visualizations.import_json(exported)
+    assert len(imported) == 2
+    assert not {item.id for item in imported} & {renamed.id, copied.id}
+    result.visualizations.delete(copied.id)
+    assert result.visualizations.list() == (renamed,)
+
+
+def _chart_spec(chart_type):
+    if chart_type == "table":
+        return spec(chart_type)
+    roles = {
+        "bar": (binding("x", "category", 0), binding("y", "a", 1)),
+        "line": (binding("x", "category", 0), binding("y", "a", 1)),
+        "area": (binding("x", "category", 0), binding("y", "a", 1)),
+        "scatter": (binding("x", "a", 1), binding("y", "b", 2)),
+        "bubble": (binding("x", "a", 1), binding("y", "b", 2), binding("size", "size", 3)),
+        "box": (binding("value", "a", 1),),
+        "pie": (binding("category", "category", 0), binding("value", "a", 1)),
+        "histogram": (binding("value", "a", 1),),
+        "heatmap": (
+            binding("x", "category", 0),
+            binding("y", "group", 4),
+            binding("color", "a", 1),
+        ),
+        "combo": (
+            binding("x", "category", 0),
+            binding("y", "a", 1, trace_type="bar"),
+            binding("y", "b", 2, trace_type="line", axis="right"),
+        ),
+        "counter": (binding("value", "a", 1), binding("target", "b", 2)),
+    }[chart_type]
+    return spec(chart_type, roles)
+
+
+@pytest.mark.parametrize("chart_type", [item.id for item in list_visualization_definitions()])
+def test_every_renderer_uses_explicit_theme_and_reports_counts(chart_type):
+    frame = pd.DataFrame(
+        {"category": ["a", "b"], "a": [1, 2], "b": [2, 3], "size": [4, 5], "group": ["x", "y"]}
+    )
+    figure = build_figure(frame, _chart_spec(chart_type), ThemeContext.fallback("dark"))
+    assert figure.layout.paper_bgcolor == "#1e1e1e"
+    assert figure.layout.meta["rn_row_counts"]["source"] == 2
+
+
+def test_plotly_template_does_not_mutate_global_default():
+    before = pio.templates.default
+    template = build_plotly_template(ThemeContext.fallback("high_contrast"))
+    assert template.layout.font.color == "#f0f0f0"
+    assert pio.templates.default == before
+
+
+def test_notebook_result_exports_and_renders_pandas_data():
     frame = pd.DataFrame({"category": ["alpha", None], "amount": [1, 2]})
     result = NotebookResult(dataframe=frame, raw=None)
-
     assert result.to_csv() == "category,amount\nalpha,1\n,2\n"
-    html = result._repr_html_()
-    assert "alpha" in html
-    assert "<table" in html
-
-
-@pytest.mark.parametrize(
-    "chart_type",
-    ["table", "bar", "line", "area", "scatter", "pie", "histogram", "value"],
-)
-def test_build_figure_supports_every_documented_chart_type(chart_type):
-    frame = pd.DataFrame({"category": ["a", "b"], "amount": [1, 2]})
-    spec = ChartSpec(chart_type=chart_type, x="category", y=("amount",))
-    assert build_figure(frame, spec) is not None
-
-
-def test_prepare_data_rejects_unknown_columns_and_bad_limits():
-    frame = pd.DataFrame({"amount": [1]})
-    with pytest.raises(ValueError, match="does not exist"):
-        prepare_data(frame, ChartSpec(filters=(FilterSpec("missing", "eq", 1),)))
-    with pytest.raises(ValueError, match="positive"):
-        prepare_data(frame, ChartSpec(limit=0))
+    assert "alpha" in result._repr_html_()
