@@ -122,14 +122,15 @@ the inference rules in this specification. Saving creates a tab named
 trimmed, must contain at least one visible character, and are limited to 80
 Unicode code points. Name matching for uniqueness is case-sensitive.
 
-Each visualization tab has a menu with **Edit**, **Rename**, **Duplicate**, and
-**Delete**. Duplicate makes a deep copy, assigns a new UUID, appends ` copy` to
+Each visualization tab exposes compact contextual buttons for **Edit**,
+**Rename**, **Duplicate**, and **Delete**. These controls are hidden on the
+Table tab. Duplicate makes a deep copy, assigns a new UUID, appends ` copy` to
 the name with a numeric suffix if needed, inserts the copy immediately after
 the source, and activates it. Delete requires confirmation and activates the
 nearest preceding tab, or Table when no visualization remains. Dragging tabs
 reorders visualizations and immediately commits the new order.
 
-The workspace header always reports one of:
+Below the active table or visualization, the workspace reports one of:
 
 - `Using N local rows.`
 - `Result truncated to N local rows; unfetched rows are excluded from all
@@ -331,6 +332,9 @@ component:
 
 - table and cell backgrounds use `--rn-surface`, text uses `--rn-text`, and
   grid lines use `--rn-border`;
+- columns use intrinsic content widths, distribute remaining workspace width
+  through automatic table layout, and overflow horizontally when they cannot
+  fit without clipping;
 - the header is sticky and uses `--rn-surface-muted`, semibold text, and a
   bottom border at least two pixels wide;
 - alternating rows use `--rn-surface-muted` at no more than 60% opacity over
@@ -350,7 +354,9 @@ Inactive tabs, disabled fields, dropdown options, tooltips, validation banners,
 and destructive confirmations must each have explicit token-based foreground,
 background, border, hover, focus, and selected states. Widget descriptions must
 not rely on ipywidgets' fixed description width; labels wrap without clipping at
-200% zoom.
+200% zoom. Visualization name inputs and the Options accordion header, body,
+expanded state, and focus state use the same semantic tokens in light, dark,
+and high-contrast themes.
 
 ### Plotly theme contract
 

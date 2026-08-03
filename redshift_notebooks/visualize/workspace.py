@@ -49,7 +49,7 @@ class VisualizationWorkspace:
             else f"Using {rows:,} local rows."
         )
         self.notice = widgets.HTML(
-            f'<div class="rn-warning" role="status">{html.escape(message)}</div>'
+            f'<div class="rn-row-notice" role="status">{html.escape(message)}</div>'
         )
         self.persistence = widgets.HTML()
         self.reapply_button = widgets.Button(
@@ -57,32 +57,59 @@ class VisualizationWorkspace:
         )
         self.reapply_button.on_click(self._reapply)
         self._persistence_changed()
-        self.tabs = widgets.ToggleButtons(description="View")
+        self.tabs = widgets.ToggleButtons()
+        self.tabs.add_class("rn-tabs")
         self.tabs.observe(self._select_tab, names="value")
-        self.add_button = widgets.Button(description="Add visualization", icon="plus")
+        self.add_button = widgets.Button(description="+", tooltip="Add visualization")
+        self.add_button.add_class("rn-add-tab")
         self.add_button.on_click(self._open_add)
-        self.action = widgets.Dropdown(
-            description="Actions",
-            options=[
-                ("Choose…", ""),
-                ("Edit", "edit"),
-                ("Rename", "rename"),
-                ("Duplicate", "duplicate"),
-                ("Delete", "delete"),
-            ],
+        self.edit_button = widgets.Button(description="Edit", icon="edit", tooltip="Edit")
+        self.rename_button = widgets.Button(
+            description="Rename", icon="pencil", tooltip="Rename"
         )
-        self.action.observe(self._action, names="value")
+        self.duplicate_button = widgets.Button(
+            description="Duplicate", icon="copy", tooltip="Duplicate"
+        )
+        self.delete_button = widgets.Button(
+            description="Delete", icon="trash", tooltip="Delete"
+        )
+        self.edit_button.on_click(self._edit_active)
+        self.rename_button.on_click(self._rename_active)
+        self.duplicate_button.on_click(self._duplicate_active)
+        self.delete_button.on_click(self._delete_active)
+        for button in (
+            self.edit_button,
+            self.rename_button,
+            self.duplicate_button,
+            self.delete_button,
+        ):
+            button.add_class("rn-context-action")
+        self.delete_button.add_class("rn-context-danger")
+        self.context_actions = widgets.HBox(
+            [
+                self.edit_button,
+                self.rename_button,
+                self.duplicate_button,
+                self.delete_button,
+            ],
+            layout=widgets.Layout(display="none"),
+        )
+        self.context_actions.add_class("rn-context-actions")
+        self.tab_strip = widgets.HBox([self.tabs, self.add_button])
+        self.tab_strip.add_class("rn-tab-strip")
+        self.toolbar = widgets.HBox([self.tab_strip, self.context_actions])
+        self.toolbar.add_class("rn-workspace-toolbar")
         self.output = widgets.Output()
         self.status = widgets.HTML('<div role="status" aria-live="polite"></div>')
         self.body = widgets.VBox([self.output])
         self.root = widgets.VBox(
             [
                 self.css,
-                self.notice,
-                widgets.HBox([self.persistence, self.reapply_button]),
-                widgets.HBox([self.tabs, self.add_button, self.action]),
+                self.toolbar,
                 self.status,
                 self.body,
+                self.notice,
+                widgets.HBox([self.persistence, self.reapply_button]),
             ]
         )
         self.root.add_class("rn-viz-workspace")
@@ -121,6 +148,7 @@ class VisualizationWorkspace:
             self.tabs.value = active if any(value == active for _, value in options) else ""
         finally:
             self._updating_tabs = False
+        self._update_context_actions()
 
     def _select_tab(self, change: dict[str, Any]) -> None:
         if self._updating_tabs or change["new"] is None:
@@ -143,6 +171,7 @@ class VisualizationWorkspace:
     def _show_active(self) -> None:
         from IPython.display import display
 
+        self._update_context_actions()
         with self.output:
             self.output.clear_output(wait=True)
             if self.manager.collection.active_id is None:
@@ -179,25 +208,41 @@ class VisualizationWorkspace:
             infer_visualization(self.result.dataframe, name=self._next_name()), creating=True
         )
 
-    def _action(self, change: dict[str, Any]) -> None:
-        action = change["new"]
-        if not action or not self.manager.collection.active_id:
-            return
-        current = self.manager.get(self.manager.collection.active_id)
-        self.action.value = ""
-        if action == "edit":
+    def _update_context_actions(self) -> None:
+        self.context_actions.layout.display = (
+            "flex" if self.manager.collection.active_id is not None else "none"
+        )
+
+    def _active_visualization(self) -> VisualizationSpec | None:
+        active_id = self.manager.collection.active_id
+        return self.manager.get(active_id) if active_id is not None else None
+
+    def _edit_active(self, _button: Any) -> None:
+        current = self._active_visualization()
+        if current is not None:
             self._open_editor(current, creating=False)
-        elif action == "duplicate":
-            self.manager.duplicate(current.id)
-            self._refresh_tabs()
-            self._show_active()
-        elif action == "delete":
-            self._confirm_delete(current)
-        elif action == "rename":
+
+    def _rename_active(self, _button: Any) -> None:
+        current = self._active_visualization()
+        if current is not None:
             self._rename(current)
+
+    def _duplicate_active(self, _button: Any) -> None:
+        current = self._active_visualization()
+        if current is None:
+            return
+        self.manager.duplicate(current.id)
+        self._refresh_tabs()
+        self._show_active()
+
+    def _delete_active(self, _button: Any) -> None:
+        current = self._active_visualization()
+        if current is not None:
+            self._confirm_delete(current)
 
     def _rename(self, current: VisualizationSpec) -> None:
         name = self.widgets.Text(description="Name", value=current.name)
+        name.add_class("rn-name-control")
         save = self.widgets.Button(description="Rename", button_style="primary")
         cancel = self.widgets.Button(description="Cancel")
 
@@ -250,6 +295,7 @@ class VisualizationWorkspace:
         self._drafts = {spec.chart_type: spec}
         widgets = self.widgets
         self.name_control = widgets.Text(description="Name", value=spec.name)
+        self.name_control.add_class("rn-name-control")
         self.type_control = widgets.Dropdown(
             description="Type",
             options=[(item.label, item.id) for item in list_visualization_definitions()],
@@ -342,6 +388,7 @@ class VisualizationWorkspace:
             self.option_controls[item.key] = control
             option_controls.append(control)
         sections = self.widgets.Accordion(children=[self.widgets.VBox(option_controls)])
+        sections.add_class("rn-options-section")
         sections.set_title(0, "Options")
         self.option_box.children = (sections,)
 

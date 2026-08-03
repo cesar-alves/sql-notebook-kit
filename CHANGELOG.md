@@ -10,6 +10,9 @@
   light, dark, and high-contrast theme categories with matching fallbacks.
 - Serialize VS Code kernel callbacks, recover across busy or replaced kernels,
   and retry callback errors before falling back to session-only metadata.
+- Redesign result rendering with a top tab strip, content-sized table columns,
+  muted row-count footers, contextual visualization actions, and fully themed
+  name and Options controls.
 
 - Define a synchronous DBAPI connection-factory contract and managed notebook session.
 - Add named profiles, environment/secret resolution, and reference browser SSO factories.

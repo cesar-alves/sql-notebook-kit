@@ -26,8 +26,14 @@ their configured extension registry or install its compatible VSIX first.
 
 With `visualization=True`, every `%%sql` result becomes a bounded
 `NotebookResult`. Its first tab is the unmodified local table. Use **Add
-visualization** to create named bar, line, area, scatter, bubble, box, pie,
+visualization** through the adjacent **+** action to create named bar, line,
+area, scatter, bubble, box, pie,
 histogram, heatmap, combo, counter, or table visualizations.
+
+Visualization tabs expose compact **Edit**, **Rename**, **Duplicate**, and
+**Delete** buttons. The result row count appears below the active content, and
+table columns size themselves from their returned values before sharing any
+remaining width.
 
 ```python
 result.dataframe
@@ -122,7 +128,9 @@ The workspace follows JupyterLab or VS Code light, dark, and high-contrast
 themes without changing notebook metadata. Plotly modebars remain enabled for
 zoom, pan, reset, legend interaction, and PNG download. Controls have keyboard
 focus, programmatic labels, live validation status, and a responsive layout for
-640-pixel notebook outputs and 200% browser zoom.
+640-pixel notebook outputs and 200% browser zoom. Visualization name fields and
+the expandable Options section use the active theme's input, surface, text,
+border, selection, and focus colors.
 
 ## Visual design lab
 
