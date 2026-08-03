@@ -123,4 +123,17 @@ pnpm build && pnpm package:vscode
 uv build
 ```
 
+To iterate on the visualization controls without rebuilding or reinstalling the
+VS Code extension, launch the interactive design lab and open the printed local
+URL:
+
+```bash
+scripts/run_visualization_lab.sh
+```
+
+The lab runs the production ipywidgets workspace against deterministic sample
+data and a simulated VS Code theme and metadata bridge. See the
+[visualization guide](docs/visualization.md#visual-design-lab) for its scenarios
+and QA workflow.
+
 Licensed under the [MIT License](LICENSE).

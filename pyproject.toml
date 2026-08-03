@@ -71,6 +71,9 @@ docs = [
 frontend = [
     "jupyterlab>=4,<5",
 ]
+gui = [
+    "voila>=0.5,<0.6",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["redshift_notebooks"]
