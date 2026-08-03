@@ -55,7 +55,7 @@ select current_user, current_database()
 ```
 
 SELECT results render as a workspace with the bounded **Table**, multiple named
-visualizations, and an **Add visualization** action when the `viz` extra is
+visualizations, and a **+** tab action when the `viz` extra is
 installed. The twelve supported types include table, Cartesian charts, bubble,
 box, pie, histogram, heatmap, combo, and counter. Applied configurations persist
 in originating-cell metadata when the bundled JupyterLab 4 companion or the

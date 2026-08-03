@@ -17,6 +17,7 @@ from redshift_notebooks.visualize import (
     ThemeContext,
     VisualizationCollection,
     VisualizationSpec,
+    VisualizationWorkspace,
     build_figure,
     build_plotly_template,
     infer_visualization,
@@ -41,6 +42,64 @@ def binding(role, column, index, **kwargs):
 
 def spec(chart_type="table", fields=(), **kwargs):
     return VisualizationSpec(1, str(uuid.uuid4()), "Example", chart_type, fields, **kwargs)
+
+
+def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"category": ["alpha"], "amount": [1]}), raw=None)
+    workspace = VisualizationWorkspace(result)
+
+    assert workspace.tabs.description == ""
+    assert tuple(workspace.tabs.options) == (("Table", ""),)
+    assert workspace.add_button.description == "+"
+    assert workspace.add_button.tooltip == "Add visualization"
+    assert workspace.context_actions.layout.display == "none"
+    assert workspace.root.children.index(workspace.toolbar) < workspace.root.children.index(
+        workspace.body
+    )
+    assert workspace.root.children.index(workspace.body) < workspace.root.children.index(
+        workspace.notice
+    )
+    assert "rn-row-notice" in workspace.notice.value
+
+    chart = spec("histogram", (binding("value", "amount", 1),))
+    result.visualizations.add(chart, persist=False)
+    workspace._refresh_tabs()
+    workspace._show_active()
+
+    assert workspace.context_actions.layout.display == "flex"
+    assert [button.description for button in workspace.context_actions.children] == [
+        "Edit",
+        "Rename",
+        "Duplicate",
+        "Delete",
+    ]
+    workspace.tabs.value = ""
+    assert workspace.context_actions.layout.display == "none"
+
+
+def test_editor_name_and_options_controls_have_theme_hooks(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"category": ["alpha"], "amount": [1]}), raw=None)
+    workspace = VisualizationWorkspace(result)
+    chart = spec("histogram", (binding("value", "amount", 1),))
+
+    workspace._open_editor(chart, creating=True)
+
+    assert "rn-name-control" in workspace.name_control._dom_classes
+    assert "rn-options-section" in workspace.option_box.children[0]._dom_classes
+
+
+def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
+    css = files("redshift_notebooks.visualize").joinpath("workspace.css").read_text()
+
+    assert "table-layout: auto; width: max-content; min-width: 100%;" in css
+    assert ".rn-row-notice" in css
+    assert "color: var(--rn-text-muted)" in css
+    assert ".rn-name-control input" in css
+    assert ".rn-options-section .lm-AccordionPanel-title" in css
+    assert "background: var(--rn-surface-muted) !important" in css
+    assert ".rn-viz-workspace.rn-theme-dark" in css
 
 
 def test_inference_uses_documented_priority_and_positions():
