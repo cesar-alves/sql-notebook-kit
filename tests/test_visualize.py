@@ -2,6 +2,7 @@ import base64
 import json
 import uuid
 from dataclasses import replace
+from importlib.resources import files
 
 import pandas as pd
 import plotly.io as pio
@@ -22,6 +23,16 @@ from redshift_notebooks.visualize import (
     list_visualization_definitions,
     prepare_data,
 )
+
+
+def test_workspace_root_is_unframed_except_in_forced_colors():
+    css = files("redshift_notebooks.visualize").joinpath("workspace.css").read_text()
+    root_rule = css.split("}", maxsplit=1)[0]
+    forced_colors = css.split("@media (forced-colors: active)", maxsplit=1)[1]
+
+    assert "border: 0; border-radius: 0; padding: 8px;" in root_rule
+    assert "border: 1px solid var(--rn-border)" not in root_rule
+    assert "border: 1px solid CanvasText" in forced_colors
 
 
 def binding(role, column, index, **kwargs):

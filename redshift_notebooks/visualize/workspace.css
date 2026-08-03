@@ -5,7 +5,7 @@
   --rn-focus: #0550ae; --rn-danger: #cf222e; --rn-warning-bg: #fff8c5;
   --rn-warning-text: #4d2d00; --rn-selection-bg: #ddf4ff; --rn-input-bg: #f6f8fa;
   color: var(--rn-text); background: var(--rn-bg); font: inherit;
-  border: 1px solid var(--rn-border); border-radius: 6px; padding: 8px;
+  border: 0; border-radius: 0; padding: 8px;
   box-sizing: border-box;
 }
 .rn-viz-workspace * { box-sizing: border-box; }

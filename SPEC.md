@@ -210,7 +210,11 @@ visualization must follow the active frontend theme without becoming dirty.
 Every workspace root has the CSS class `rn-viz-workspace` and exactly one of
 `rn-theme-light`, `rn-theme-dark`, or `rn-theme-high-contrast`. All library CSS
 is scoped beneath `rn-viz-workspace`; it must not style generic notebook,
-`.widget-*`, or `.dataframe` elements outside that root.
+`.widget-*`, or `.dataframe` elements outside that root. In normal light and
+dark themes, the workspace root is unframed so it blends into the notebook
+output; component borders remain available for tables, controls, warnings, and
+other structural boundaries. Forced-colors mode retains an explicit root
+boundary.
 
 The frontend companion resolves host theme values into this stable semantic
 token contract:
