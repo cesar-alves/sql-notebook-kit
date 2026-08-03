@@ -72,6 +72,7 @@ frontend = [
     "jupyterlab>=4,<5",
 ]
 gui = [
+    "ipykernel>=6,<8",
     "voila>=0.5,<0.6",
 ]
 

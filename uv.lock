@@ -2643,6 +2643,7 @@ frontend = [
     { name = "jupyterlab" },
 ]
 gui = [
+    { name = "ipykernel" },
     { name = "voila" },
 ]
 
@@ -2684,7 +2685,10 @@ docs = [
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.27,<1" },
 ]
 frontend = [{ name = "jupyterlab", specifier = ">=4,<5" }]
-gui = [{ name = "voila", specifier = ">=0.5,<0.6" }]
+gui = [
+    { name = "ipykernel", specifier = ">=6,<8" },
+    { name = "voila", specifier = ">=0.5,<0.6" },
+]
 
 [[package]]
 name = "referencing"
