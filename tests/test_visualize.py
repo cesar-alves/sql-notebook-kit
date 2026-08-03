@@ -215,6 +215,25 @@ def test_vscode_bridge_accepts_versioned_callback_and_ignores_invalid_payload(mo
     from redshift_notebooks.visualize import protocol
 
     displayed = []
+    timers = []
+
+    class Timer:
+        daemon = False
+
+        def __init__(self, interval, callback):
+            self.interval = interval
+            self.callback = callback
+            self.started = False
+            self.cancelled = False
+            timers.append(self)
+
+        def start(self):
+            self.started = True
+
+        def cancel(self):
+            self.cancelled = True
+
+    monkeypatch.setattr(protocol.threading, "Timer", Timer)
     monkeypatch.setattr("IPython.display.display", lambda *args, **kwargs: displayed.append(args))
     monkeypatch.setattr(
         "IPython.display.update_display", lambda *args, **kwargs: displayed.append(args)
@@ -234,6 +253,9 @@ def test_vscode_bridge_accepts_versioned_callback_and_ignores_invalid_payload(mo
     assert bridge.available
     assert bridge.reason is None
     assert len(displayed) == 2
+    assert timers[0].interval == 45.0
+    assert timers[0].started
+    assert timers[0].cancelled
 
 
 def _chart_spec(chart_type):

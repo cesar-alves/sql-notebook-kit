@@ -17,6 +17,7 @@ from redshift_notebooks.visualize.theme import ThemeContext
 PROTOCOL_VERSION = 1
 COMM_TARGET = "redshift_notebooks.visualizations.v1"
 VSCODE_MIME = "application/vnd.redshift-notebooks.bridge+json"
+VSCODE_CAPABILITY_TIMEOUT = 45.0
 _VSCODE_BRIDGES: weakref.WeakValueDictionary[str, VscodePersistenceBridge] = (
     weakref.WeakValueDictionary()
 )
@@ -151,7 +152,9 @@ class VscodePersistenceBridge(_ThemeSupport):
         self._display_id = f"redshift-notebooks-{self.session_id}"
         _VSCODE_BRIDGES[self.session_id] = self
         self._emit("capabilities", {})
-        self._capability_timer = threading.Timer(10.0, self._capability_timeout)
+        self._capability_timer = threading.Timer(
+            VSCODE_CAPABILITY_TIMEOUT, self._capability_timeout
+        )
         self._capability_timer.daemon = True
         self._capability_timer.start()
 
