@@ -13,6 +13,14 @@ def test_visualization_extras_declare_nbformat():
     assert "nbformat>=5.10,<6" in extras["all"]
 
 
+def test_gui_group_declares_python_kernel():
+    dependency_groups = tomllib.loads((ROOT / "pyproject.toml").read_text())[
+        "dependency-groups"
+    ]
+
+    assert "ipykernel>=6,<8" in dependency_groups["gui"]
+
+
 def test_bundled_vscode_extension_matches_python_version():
     vsix = ROOT / "redshift_notebooks/vscode/redshift-notebooks-vscode.vsix"
     assert vsix.is_file()
