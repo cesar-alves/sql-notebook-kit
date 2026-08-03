@@ -63,12 +63,18 @@ importers:
       '@types/vscode':
         specifier: ^1.100.0
         version: 1.125.0
+      '@types/vscode-notebook-renderer':
+        specifier: ^1.72.4
+        version: 1.72.4
       '@vscode/vsce':
         specifier: ^3.6.0
         version: 3.9.2
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+      jsdom:
+        specifier: ^20.0.3
+        version: 20.0.3
 
 packages:
 
@@ -1257,6 +1263,9 @@ packages:
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
+  '@types/vscode-notebook-renderer@1.72.4':
+    resolution: {integrity: sha512-bdKO41c6Dc24pH/O/eM/jqfCwGH4zc76o/g/6Gt1y/eg/bvvqP2/VpbV+Sa5Te2sZekFRcbYnSSFTKo3wcVGUg==}
 
   '@types/vscode@1.125.0':
     resolution: {integrity: sha512-0icm/ZQAaism87P0ekHqi4/Ju9du+Tm0RUW+y7vqRsxY2cY0FNRX1nAnaW7nT6npPt2tfHiheZ55Zm9UhqonFA==}
@@ -5196,6 +5205,8 @@ snapshots:
 
   '@types/trusted-types@2.0.7':
     optional: true
+
+  '@types/vscode-notebook-renderer@1.72.4': {}
 
   '@types/vscode@1.125.0': {}
 

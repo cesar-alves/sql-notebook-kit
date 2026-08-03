@@ -6,6 +6,8 @@
   `redshift-notebooks vscode install/status/path` commands.
 - Correct VS Code cell matching and transport, validate bridge messages, and
   add deferred save acknowledgements, conflict recovery, and theme updates.
+- Export the VS Code notebook renderer as an ES module and follow live VS Code
+  light, dark, and high-contrast theme categories with matching fallbacks.
 
 - Define a synchronous DBAPI connection-factory contract and managed notebook session.
 - Add named profiles, environment/secret resolution, and reference browser SSO factories.
