@@ -123,3 +123,37 @@ themes without changing notebook metadata. Plotly modebars remain enabled for
 zoom, pan, reset, legend interaction, and PNG download. Controls have keyboard
 focus, programmatic labels, live validation status, and a responsive layout for
 640-pixel notebook outputs and 200% browser zoom.
+
+## Visual design lab
+
+Use the development lab to work on the real visualization controls without
+building, installing, or reloading the VS Code extension:
+
+```bash
+scripts/run_visualization_lab.sh
+```
+
+The command starts Voilà on `http://localhost:8866`. Set
+`REDSHIFT_NOTEBOOKS_LAB_PORT` when that port is already in use. Refreshing the
+page starts a fresh kernel, so current Python and `workspace.css` changes are
+loaded immediately.
+
+The lab renders the production `VisualizationWorkspace` and Plotly figures. Its
+development-only bridge simulates VS Code theme updates and deferred metadata
+saves. The toolbar provides:
+
+- fresh, saved, truncated, missing-value, empty, and invalid-binding scenarios;
+- light, dark, and high-contrast themes;
+- 1100-pixel and 640-pixel output frames plus 100% and 200% zoom;
+- writable, connecting, and session-only persistence states; and
+- save acknowledgement, conflict, and failure responses after a workspace edit.
+
+For a manual visual pass, exercise add, preview, apply, edit, rename, duplicate,
+delete, cancel, and reset. Repeat the editor flow at 640 pixels and 200% zoom,
+then switch themes while the table, a chart, and the editor preview are visible.
+Confirm keyboard focus remains visible, status messages are announced, and the
+Plotly modebar and legend interactions still work.
+
+This lab deliberately simulates the host boundary rather than the complete VS
+Code shell. Existing renderer tests continue to cover VS Code message delivery
+and token resolution; perform one extension smoke test before a release.
