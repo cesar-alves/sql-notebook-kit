@@ -7,6 +7,8 @@
   "repository": "https://github.com/cesar-alves/redshift-notebooks",
   "files": ["dist", "LICENSE"],
   "engines": { "vscode": "^1.100.0" },
+  "extensionKind": ["workspace"],
+  "extensionDependencies": ["ms-toolsai.jupyter"],
   "main": "./dist/extension.cjs",
   "activationEvents": ["onRenderer:redshift-notebooks-bridge"],
   "contributes": {
@@ -21,11 +23,12 @@
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.cjs && esbuild src/renderer.ts --bundle --format=iife --outfile=dist/renderer.js",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": { "@redshift-notebooks/protocol": "workspace:*" },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@types/vscode": "^1.100.0",
     "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.25.0"

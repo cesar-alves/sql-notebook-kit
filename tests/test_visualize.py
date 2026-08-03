@@ -1,3 +1,4 @@
+import base64
 import json
 import uuid
 from dataclasses import replace
@@ -148,6 +149,91 @@ def test_manager_crud_import_and_session_dirty_fallback():
     assert not {item.id for item in imported} & {renamed.id, copied.id}
     result.visualizations.delete(copied.id)
     assert result.visualizations.list() == (renamed,)
+
+
+class DeferredBridge:
+    available = True
+    deferred = True
+    reason = None
+
+    def __init__(self):
+        self.calls = []
+        self.handler = None
+
+    def set_response_handler(self, handler):
+        self.handler = handler
+
+    def subscribe_state(self, _handler):
+        pass
+
+    def save(self, collection, *, expected_revision):
+        self.calls.append((collection, expected_revision))
+
+
+def test_deferred_persistence_coalesces_edits_and_acknowledges_revisions():
+    from redshift_notebooks.visualize.manager import VisualizationManager
+
+    bridge = DeferredBridge()
+    result = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
+    manager = VisualizationManager(result, bridge=bridge)
+    first = spec("histogram", (binding("value", "value", 0),))
+    manager.add(first)
+    manager.rename(first.id, "Renamed")
+    assert len(bridge.calls) == 1
+    assert manager.dirty
+
+    bridge.handler({"operation": "save_result", "payload": {"revision": 1}})
+    assert len(bridge.calls) == 2
+    assert bridge.calls[1][1] == 1
+    bridge.handler({"operation": "save_result", "payload": {"revision": 2}})
+    assert not manager.dirty
+    assert manager.collection.revision == 2
+
+
+def test_manager_restores_execute_request_metadata_and_preserves_conflict_draft():
+    from redshift_notebooks.visualize.manager import VisualizationManager
+
+    saved = VisualizationCollection(1, 4, None, ())
+    bridge = DeferredBridge()
+    result = NotebookResult(
+        pd.DataFrame({"value": [1]}), raw=None, visualization_metadata=saved.to_dict()
+    )
+    manager = VisualizationManager(result, bridge=bridge)
+    first = spec("histogram", (binding("value", "value", 0),))
+    manager.add(first)
+    bridge.handler({
+        "operation": "save_result",
+        "payload": {"conflict": True, "collection": saved.to_dict()},
+    })
+    assert manager.persistence_state == "conflict"
+    assert manager.list() == ()
+    manager.reapply()
+    assert manager.list() == (first,)
+
+
+def test_vscode_bridge_accepts_versioned_callback_and_ignores_invalid_payload(monkeypatch):
+    from redshift_notebooks.visualize import protocol
+
+    displayed = []
+    monkeypatch.setattr("IPython.display.display", lambda *args, **kwargs: displayed.append(args))
+    monkeypatch.setattr(
+        "IPython.display.update_display", lambda *args, **kwargs: displayed.append(args)
+    )
+    bridge = protocol.VscodePersistenceBridge("vscode-notebook-cell:/example#1")
+    message = {
+        "protocol_version": 1,
+        "request_id": str(uuid.uuid4()),
+        "session_id": bridge.session_id,
+        "cell_id": bridge.cell_id,
+        "operation": "capabilities_result",
+        "payload": {"persistence": True},
+    }
+    encoded = base64.b64encode(json.dumps(message).encode()).decode()
+    protocol._deliver_vscode_response(encoded)
+    protocol._deliver_vscode_response(base64.b64encode(b"[]").decode())
+    assert bridge.available
+    assert bridge.reason is None
+    assert len(displayed) == 2
 
 
 def _chart_spec(chart_type):

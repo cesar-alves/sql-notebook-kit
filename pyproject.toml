@@ -48,6 +48,9 @@ all = [
 Repository = "https://github.com/cesar-alves/redshift-notebooks"
 Issues = "https://github.com/cesar-alves/redshift-notebooks/issues"
 
+[project.scripts]
+redshift-notebooks = "redshift_notebooks.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
@@ -79,6 +82,7 @@ packages = ["redshift_notebooks"]
 include = [
     "redshift_notebooks/**/*.py",
     "redshift_notebooks/**/*.css",
+    "redshift_notebooks/**/*.vsix",
     "redshift_notebooks/labextension/**/*",
     "redshift_notebooks/py.typed",
     "README.md",
@@ -91,6 +95,7 @@ include = [
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
     "frontend/**/*",
+    "!frontend/**/node_modules/**/*",
 ]
 
 [tool.pytest.ini_options]

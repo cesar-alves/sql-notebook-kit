@@ -626,9 +626,13 @@ kernel; the workspace shows an upgrade-required message.
 ### Frontend bridge
 
 Cell metadata is controlled by notebook frontends, so persistence requires a
-versioned bridge. The Python side opens a `redshift_notebooks.visualizations.v1`
-comm target and performs capability negotiation. Messages are JSON and include
-`protocol_version`, `request_id`, `cell_id`, and the operation payload.
+versioned bridge. JupyterLab uses the
+`redshift_notebooks.visualizations.v1` comm target. VS Code uses the companion's
+custom MIME renderer for requests and the stable Microsoft Jupyter kernel API
+for deferred responses after the kernel becomes idle. VS Code restores the
+collection directly from execute-request cell metadata. Messages are JSON and
+include `protocol_version`, `request_id`, `session_id`, `cell_id`, and the
+operation payload.
 
 Supported operations are:
 
@@ -638,7 +642,8 @@ Supported operations are:
 - `theme_changed`; and
 - `error`.
 
-The frontend associates the running request with its stable notebook cell ID.
+The frontend associates the request with its notebook cell ID. In VS Code this
+is `NotebookCell.document.uri`, matching the `cellId` sent to the kernel.
 `load` returns absent metadata as an empty revision-zero collection. `save`
 includes `expected_revision` and the entire next collection. The frontend
 performs compare-and-swap, writes the namespaced cell metadata using its public
@@ -649,9 +654,9 @@ On a revision conflict the frontend returns the current payload. The kernel
 keeps the user's draft, refreshes applied state, and offers **Reapply changes**;
 it never silently overwrites the newer metadata.
 
-JupyterLab support is a prebuilt JupyterLab 4 extension bundled into the Python
-wheel. VS Code support is a companion extension using the public Notebook API
-and distributed as a VSIX/Marketplace package. The two implementations share
+JupyterLab support and the prebuilt VS Code VSIX are bundled into the Python
+wheel. The VS Code companion uses the public Notebook API and is installed with
+`redshift-notebooks vscode install`. The two implementations share
 protocol fixtures. A missing, timed-out, read-only, or incompatible bridge
 switches to session-only mode without disabling chart creation.
 

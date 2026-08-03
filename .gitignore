@@ -16,6 +16,7 @@ node_modules/
 frontend/*/lib/
 frontend/*/dist/
 *.vsix
+!redshift_notebooks/vscode/redshift-notebooks-vscode.vsix
 
 # Virtual environments
 .venv/

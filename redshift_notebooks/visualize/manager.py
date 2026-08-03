@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Any, Protocol
 
@@ -18,6 +19,7 @@ from redshift_notebooks.visualize.models import (
 
 class PersistenceBridge(Protocol):
     available: bool
+    deferred: bool
     reason: str | None
 
     def load(self) -> VisualizationCollection: ...
@@ -28,7 +30,9 @@ class PersistenceBridge(Protocol):
 class SessionPersistenceBridge:
     """Explicit session-only fallback used when no frontend companion responds."""
 
-    available = False
+    available: bool = False
+    deferred: bool = False
+    reason: str | None
 
     def __init__(self, reason: str = "Frontend metadata companion is unavailable.") -> None:
         self.reason = reason
@@ -50,12 +54,29 @@ class VisualizationManager:
         bridge: PersistenceBridge | None = None,
     ) -> None:
         self._result = result
+        self._listeners: list[Callable[[], None]] = []
+        self._in_flight: VisualizationCollection | None = None
+        self._queued: VisualizationCollection | None = None
+        self._conflict_draft: VisualizationCollection | None = None
+        metadata = getattr(result, "visualization_metadata", None)
+        metadata_error: str | None = None
+        if collection is None and metadata is not None:
+            try:
+                collection = VisualizationCollection.from_dict(metadata)
+            except VisualizationConfigError as exc:
+                metadata_error = f"Stored visualization metadata is incompatible: {exc}"
         if bridge is None:
             from redshift_notebooks.visualize.protocol import create_persistence_bridge
 
             bridge = create_persistence_bridge(getattr(result, "cell_id", None))
+        if metadata_error:
+            bridge = SessionPersistenceBridge(metadata_error)
         self._bridge = bridge or SessionPersistenceBridge()
-        if collection is None and self._bridge.available:
+        if (
+            collection is None
+            and self._bridge.available
+            and not getattr(self._bridge, "deferred", False)
+        ):
             try:
                 collection = self._bridge.load()
             except VisualizationPersistenceError:
@@ -63,6 +84,12 @@ class VisualizationManager:
         self._collection = collection or VisualizationCollection()
         self.dirty = False
         self.persistence_error: str | None = self._bridge.reason
+        set_handler = getattr(self._bridge, "set_response_handler", None)
+        if set_handler is not None:
+            set_handler(self._handle_bridge_response)
+        subscribe_state = getattr(self._bridge, "subscribe_state", None)
+        if subscribe_state is not None:
+            subscribe_state(self._notify)
 
     @property
     def collection(self) -> VisualizationCollection:
@@ -71,6 +98,27 @@ class VisualizationManager:
     @property
     def persistence_available(self) -> bool:
         return self._bridge.available
+
+    @property
+    def persistence_state(self) -> str:
+        if self._conflict_draft is not None:
+            return "conflict"
+        if self.persistence_error and self.persistence_error.startswith("Connecting to"):
+            return "connecting"
+        if self.persistence_error:
+            return "session_only"
+        if self.dirty:
+            return "pending"
+        return "saved" if self.persistence_available else "connecting"
+
+    def subscribe_state(self, listener: Callable[[], None]) -> None:
+        self._listeners.append(listener)
+
+    def _notify(self) -> None:
+        if not self._bridge.available:
+            self.persistence_error = self._bridge.reason
+        for listener in tuple(self._listeners):
+            listener()
 
     def list(self) -> tuple[VisualizationSpec, ...]:
         return self._collection.items
@@ -94,6 +142,15 @@ class VisualizationManager:
         self._collection = next_collection
         if not persist:
             return
+        if getattr(self._bridge, "deferred", False):
+            self.dirty = True
+            self.persistence_error = None
+            if self._in_flight is None:
+                self._send_deferred(next_collection, previous_revision)
+            else:
+                self._queued = next_collection
+            self._notify()
+            return
         try:
             revision = self._bridge.save(next_collection, expected_revision=previous_revision)
         except VisualizationPersistenceError as exc:
@@ -103,6 +160,68 @@ class VisualizationManager:
             self._collection = replace(next_collection, revision=revision)
             self.dirty = False
             self.persistence_error = None
+        self._notify()
+
+    def _send_deferred(self, collection: VisualizationCollection, expected_revision: int) -> None:
+        normalized = replace(collection, revision=expected_revision + 1)
+        self._in_flight = normalized
+        self._bridge.save(normalized, expected_revision=expected_revision)
+
+    def _handle_bridge_response(self, message: dict[str, Any]) -> None:
+        operation = message.get("operation")
+        payload = message.get("payload", {})
+        if operation == "capabilities_result":
+            self.persistence_error = self._bridge.reason
+            self._notify()
+            return
+        if operation == "error":
+            self._in_flight = None
+            self.dirty = True
+            self.persistence_error = str(payload.get("message", "Persistence failed."))
+            self._notify()
+            return
+        if operation != "save_result" or self._in_flight is None:
+            return
+        attempted = self._queued or self._in_flight
+        if payload.get("conflict"):
+            try:
+                current = VisualizationCollection.from_dict(payload.get("collection", {}))
+            except VisualizationConfigError as exc:
+                self.persistence_error = f"Invalid conflict response: {exc}"
+            else:
+                self._conflict_draft = attempted
+                self._collection = current
+                self.persistence_error = "Visualization metadata changed in another view."
+            self._in_flight = None
+            self._queued = None
+            self.dirty = True
+            self._notify()
+            return
+        revision = payload.get("revision")
+        if not isinstance(revision, int):
+            self.persistence_error = "Frontend returned an invalid revision."
+            self._in_flight = None
+            self.dirty = True
+            self._notify()
+            return
+        self._in_flight = None
+        if self._queued is not None:
+            queued = self._queued
+            self._queued = None
+            self._collection = replace(queued, revision=revision + 1)
+            self._send_deferred(self._collection, revision)
+        else:
+            self._collection = replace(self._collection, revision=revision)
+            self.dirty = False
+            self.persistence_error = None
+        self._notify()
+
+    def reapply(self) -> None:
+        if self._conflict_draft is None:
+            return
+        draft = self._conflict_draft
+        self._conflict_draft = None
+        self._commit(draft.items, draft.active_id, True)
 
     @staticmethod
     def _unique_name(name: str, items: tuple[VisualizationSpec, ...]) -> str:

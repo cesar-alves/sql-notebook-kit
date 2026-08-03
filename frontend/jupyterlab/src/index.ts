@@ -7,6 +7,7 @@ import {
   PROTOCOL_VERSION,
   collectionFromMetadata,
   emptyCollection,
+  isCollection,
   isBridgeMessage,
   metadataWithCollection,
   type BridgeMessage,
@@ -14,7 +15,7 @@ import {
 } from '@redshift-notebooks/protocol';
 import '../style/index.css';
 
-const activeComms = new Map<any, string>();
+const activeComms = new Map<any, { cellId: string; sessionId: string }>();
 let currentTheme: 'light' | 'dark' | 'high_contrast' = 'light';
 let themeTimer: number | undefined;
 
@@ -57,10 +58,11 @@ function themePayload() {
   };
 }
 
-function sendTheme(comm: any, cellId: string): void {
+function sendTheme(comm: any, cellId: string, sessionId: string): void {
   comm.send({
     protocol_version: PROTOCOL_VERSION,
     request_id: crypto.randomUUID(),
+    session_id: sessionId,
     cell_id: cellId,
     operation: 'theme_changed',
     payload: themePayload()
@@ -70,7 +72,7 @@ function sendTheme(comm: any, cellId: string): void {
 function broadcastTheme(): void {
   window.clearTimeout(themeTimer);
   themeTimer = window.setTimeout(() => {
-    activeComms.forEach((cellId, comm) => sendTheme(comm, cellId));
+    activeComms.forEach(({ cellId, sessionId }, comm) => sendTheme(comm, cellId, sessionId));
   }, 100);
 }
 
@@ -97,9 +99,9 @@ function handle(panel: NotebookPanel, comm: any, value: unknown): void {
     return;
   }
   if (request.operation === 'capabilities') {
-    activeComms.set(comm, request.cell_id);
+    activeComms.set(comm, { cellId: request.cell_id, sessionId: request.session_id });
     reply(comm, request, 'capabilities_result', { persistence: !panel.context.model.readOnly });
-    sendTheme(comm, request.cell_id);
+    sendTheme(comm, request.cell_id, request.session_id);
     return;
   }
   const metadata = cell.model.sharedModel.getMetadata() as Record<string, unknown>;
@@ -116,13 +118,23 @@ function handle(panel: NotebookPanel, comm: any, value: unknown): void {
       reply(comm, request, 'error', { message: 'The notebook is read-only.' });
       return;
     }
-    const current = collectionFromMetadata(metadata);
+    let current: Collection;
+    try {
+      current = collectionFromMetadata(metadata);
+    } catch (error) {
+      reply(comm, request, 'error', { message: (error as Error).message });
+      return;
+    }
     const expected = request.payload.expected_revision;
     if (expected !== current.revision) {
       reply(comm, request, 'save_result', { conflict: true, collection: current });
       return;
     }
     const next = request.payload.collection as Collection;
+    if (!isCollection(next) || next.revision !== current.revision + 1) {
+      reply(comm, request, 'error', { message: 'The visualization collection is invalid.' });
+      return;
+    }
     cell.model.sharedModel.setMetadata(metadataWithCollection(metadata, next) as any);
     panel.context.model.dirty = true;
     reply(comm, request, 'save_result', { revision: next.revision });
