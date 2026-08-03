@@ -26,6 +26,7 @@ class NotebookResult:
     truncated: bool = False
     max_rows: int = 10_000
     cell_id: str | None = None
+    visualization_metadata: dict[str, Any] | None = None
     _visualizations: Any = field(default=None, init=False, repr=False)
     _workspace: Any = field(default=None, init=False, repr=False)
 

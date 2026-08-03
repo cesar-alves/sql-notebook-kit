@@ -20,4 +20,14 @@ describe('shared visualization protocol', () => {
   it('rejects an incompatible protocol message', () => {
     expect(isBridgeMessage({ protocol_version: 2 })).toBe(false);
   });
+
+  it('rejects unknown operations and malformed collections', () => {
+    expect(isBridgeMessage({
+      protocol_version: 1, request_id: 'r', session_id: 's', cell_id: 'c',
+      operation: 'execute', payload: {}
+    })).toBe(false);
+    expect(() => collectionFromMetadata({
+      redshift_notebooks: { visualizations: { schema_version: 1, revision: -1, items: [] } }
+    })).toThrow(/newer compatible extension/);
+  });
 });

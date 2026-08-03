@@ -16,6 +16,19 @@ uv pip install -e '.[redshift,viz]'
 
 Use the resulting environment as the notebook kernel.
 
+For VS Code, install the companion bundled in the same Python package and
+reload the window:
+
+```bash
+redshift-notebooks vscode install
+redshift-notebooks vscode status
+```
+
+The installer detects `code`, `code-insiders`, and `codium`; use `--editor` or
+`--cli /path/to/editor-cli` to override it. Run the command in the matching SSH,
+WSL, or dev-container terminal for remote windows. Browser-only `vscode.dev` is
+not supported, and the Microsoft Jupyter extension is required.
+
 ## Existing SSO factory
 
 ```python
@@ -46,7 +59,7 @@ visualizations, and an **Add visualization** action when the `viz` extra is
 installed. The twelve supported types include table, Cartesian charts, bubble,
 box, pie, histogram, heatmap, combo, and counter. Applied configurations persist
 in originating-cell metadata when the bundled JupyterLab 4 companion or the
-separate VS Code companion is available; otherwise the workspace clearly uses
+wheel-bundled VS Code companion is available; otherwise the workspace clearly uses
 session-only mode. The visualization extra includes the notebook MIME support
 required by Plotly and requires pandas 3.0.5 or newer within the pandas 3
 release series.
@@ -105,6 +118,8 @@ uv run pytest
 uv run ruff check .
 uv run mypy redshift_notebooks
 uv run --group docs mkdocs build --strict
+pnpm check && pnpm test
+pnpm build && pnpm package:vscode
 uv build
 ```
 

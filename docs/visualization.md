@@ -8,8 +8,21 @@ uv pip install -e '.[viz]'
 
 The visualization extra supports pandas 3.0.5 or newer within the pandas 3
 release series and installs `nbformat` for Plotly notebook MIME rendering.
-JupyterLab 4 metadata support is bundled with the Python wheel. VS Code
-additionally requires the `redshift-notebooks-vscode` companion VSIX.
+JupyterLab 4 metadata support and the VS Code companion VSIX are bundled with
+the Python wheel. Install the latter into the active VS Code extension host:
+
+```bash
+redshift-notebooks vscode install
+redshift-notebooks vscode status
+```
+
+Use `redshift-notebooks vscode path` for offline/manual installation. The
+installer supports `code`, `code-insiders`, and `codium`, plus `--cli` for a
+compatible custom command. Run it in the matching remote terminal for SSH,
+WSL, or dev-container windows, then reload the window. Microsoft Jupyter is a
+required VS Code extension; browser-only `vscode.dev` is not supported.
+VSCodium users must make the `ms-toolsai.jupyter` extension ID available in
+their configured extension registry or install its compatible VSIX first.
 
 With `visualization=True`, every `%%sql` result becomes a bounded
 `NotebookResult`. Its first tab is the unmodified local table. Use **Add
@@ -75,9 +88,11 @@ Applied state is stored under
 contains specifications only—never result rows, Plotly figures, credentials,
 drafts, or presentation theme state.
 
-The workspace displays a session-only warning when the companion is missing,
-incompatible, timed out, or the notebook is read-only. Editing remains usable
-for the current kernel session. In Python, inspect:
+The workspace reports connecting and pending saves, then displays a
+session-only warning when the companion is missing, incompatible, timed out,
+or the notebook is read-only. A revision conflict reloads persisted state but
+retains the local draft behind **Reapply changes**. Editing remains usable for
+the current kernel session. In Python, inspect:
 
 ```python
 result.visualizations.persistence_available
@@ -91,9 +106,15 @@ JupyterLab users can confirm the bundled extension with:
 jupyter labextension list
 ```
 
-VS Code users install the separately built VSIX and reload the window. Both
+VS Code users install the wheel-bundled VSIX and reload the window. Both
 companions use protocol version 1 and compare-and-swap revisions so one view
 cannot silently overwrite newer cell metadata.
+
+JupyterLab registers a kernel comm target. VS Code receives requests through a
+hidden custom MIME renderer, writes metadata with the public Notebook API, and
+returns acknowledgements through the stable Jupyter extension kernel API after
+the kernel becomes idle. Existing VS Code metadata is restored from the cell's
+execute-request metadata. Neither frontend edits `.ipynb` files directly.
 
 ## Themes and accessibility
 

@@ -2,6 +2,11 @@
 
 ## 0.1.0
 
+- Bundle the hardened VS Code companion in the Python wheel and add
+  `redshift-notebooks vscode install/status/path` commands.
+- Correct VS Code cell matching and transport, validate bridge messages, and
+  add deferred save acknowledgements, conflict recovery, and theme updates.
+
 - Define a synchronous DBAPI connection-factory contract and managed notebook session.
 - Add named profiles, environment/secret resolution, and reference browser SSO factories.
 - Add bounded `NotebookResult` output and optional Plotly/ipywidgets visualization.

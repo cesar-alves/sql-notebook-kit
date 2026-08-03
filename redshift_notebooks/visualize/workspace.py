@@ -33,6 +33,7 @@ class VisualizationWorkspace:
         self.manager = result.visualizations
         self.theme = self.manager.theme
         self.manager.subscribe_theme(self._theme_changed)
+        self.manager.subscribe_state(self._persistence_changed)
         self.widgets = widgets
         self._draft: VisualizationSpec | None = None
         self._drafts: dict[str, VisualizationSpec] = {}
@@ -50,13 +51,12 @@ class VisualizationWorkspace:
         self.notice = widgets.HTML(
             f'<div class="rn-warning" role="status">{html.escape(message)}</div>'
         )
-        persistence = (
-            ""
-            if self.manager.persistence_available
-            else '<div class="rn-warning" role="status">⚠ Changes are available for '
-            "this kernel session but are not persisted.</div>"
+        self.persistence = widgets.HTML()
+        self.reapply_button = widgets.Button(
+            description="Reapply changes", icon="refresh", layout=widgets.Layout(display="none")
         )
-        self.persistence = widgets.HTML(persistence)
+        self.reapply_button.on_click(self._reapply)
+        self._persistence_changed()
         self.tabs = widgets.ToggleButtons(description="View")
         self.tabs.observe(self._select_tab, names="value")
         self.add_button = widgets.Button(description="Add visualization", icon="plus")
@@ -79,7 +79,7 @@ class VisualizationWorkspace:
             [
                 self.css,
                 self.notice,
-                self.persistence,
+                widgets.HBox([self.persistence, self.reapply_button]),
                 widgets.HBox([self.tabs, self.add_button, self.action]),
                 self.status,
                 self.body,
@@ -87,6 +87,28 @@ class VisualizationWorkspace:
         )
         self.root.add_class("rn-viz-workspace")
         self.root.add_class("rn-theme-light")
+        self._refresh_tabs()
+        self._show_active()
+
+    def _persistence_changed(self) -> None:
+        state = self.manager.persistence_state
+        messages = {
+            "connecting": "Connecting to the VS Code metadata companion…",
+            "pending": "Saving visualization metadata…",
+            "session_only": self.manager.persistence_error
+            or "Changes are available for this kernel session but are not persisted.",
+            "conflict": "Visualization metadata changed in another view.",
+        }
+        message = messages.get(state, "")
+        self.persistence.value = (
+            f'<div class="rn-warning" role="status">⚠ {html.escape(message)}</div>'
+            if message
+            else ""
+        )
+        self.reapply_button.layout.display = "" if state == "conflict" else "none"
+
+    def _reapply(self, _button: Any) -> None:
+        self.manager.reapply()
         self._refresh_tabs()
         self._show_active()
 

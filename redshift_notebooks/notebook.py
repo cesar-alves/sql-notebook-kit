@@ -36,7 +36,13 @@ def _visualization_available() -> bool:
     return True
 
 
-def _detach_result(raw: Any, max_rows: int, *, cell_id: str | None = None) -> NotebookResult | Any:
+def _detach_result(
+    raw: Any,
+    max_rows: int,
+    *,
+    cell_id: str | None = None,
+    visualization_metadata: dict[str, Any] | None = None,
+) -> NotebookResult | Any:
     """Consume at most max_rows + 1 from a JupySQL 0.11 ResultSet."""
     if not all(hasattr(raw, attribute) for attribute in ("keys", "fetchmany", "DataFrame")):
         return raw
@@ -63,6 +69,7 @@ def _detach_result(raw: Any, max_rows: int, *, cell_id: str | None = None) -> No
         truncated=truncated,
         max_rows=max_rows,
         cell_id=cell_id,
+        visualization_metadata=visualization_metadata,
     )
 
 
@@ -123,7 +130,16 @@ def _install_session_sql_magic(ipython: Any, state: _NotebookState) -> None:
                 parent: Any = getattr(ipython, "get_parent", lambda: {})() or {}
                 metadata = parent.get("metadata", {}) if isinstance(parent, dict) else {}
                 cell_id = metadata.get("cellId") or metadata.get("cell_id")
-                return _detach_result(raw, active_state.max_rows, cell_id=cell_id)
+                namespace = metadata.get("redshift_notebooks")
+                visualization_metadata = (
+                    namespace.get("visualizations") if isinstance(namespace, dict) else None
+                )
+                return _detach_result(
+                    raw,
+                    active_state.max_rows,
+                    cell_id=cell_id,
+                    visualization_metadata=visualization_metadata,
+                )
             return raw
         finally:
             magic_owner.autolimit = old_autolimit

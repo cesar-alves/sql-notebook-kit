@@ -33,7 +33,7 @@
     "extension": true,
     "outputDir": "../../redshift_notebooks/labextension",
     "_build": {
-      "load": "static/remoteEntry.a48294df75c66bd9.js",
+      "load": "static/remoteEntry.461057242e830fcb.js",
       "extension": "./extension"
     }
   }
