@@ -8,6 +8,8 @@
   add deferred save acknowledgements, conflict recovery, and theme updates.
 - Export the VS Code notebook renderer as an ES module and follow live VS Code
   light, dark, and high-contrast theme categories with matching fallbacks.
+- Serialize VS Code kernel callbacks, recover across busy or replaced kernels,
+  and retry callback errors before falling back to session-only metadata.
 
 - Define a synchronous DBAPI connection-factory contract and managed notebook session.
 - Add named profiles, environment/secret resolution, and reference browser SSO factories.
