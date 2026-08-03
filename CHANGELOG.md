@@ -16,3 +16,5 @@
   drift handling.
 - Bundle a JupyterLab 4 metadata/theme companion and add a VS Code companion
   package using the shared revisioned persistence protocol.
+- Declare `nbformat` in the visualization extras so Plotly graphs render through
+  the notebook MIME path in clean kernel environments.

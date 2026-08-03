@@ -5,6 +5,7 @@ from dataclasses import replace
 import pandas as pd
 import plotly.io as pio
 import pytest
+from plotly.io import _renderers
 
 from redshift_notebooks.errors import VisualizationConfigError
 from redshift_notebooks.results import NotebookResult
@@ -191,6 +192,23 @@ def test_plotly_template_does_not_mutate_global_default():
     template = build_plotly_template(ThemeContext.fallback("high_contrast"))
     assert template.layout.font.color == "#f0f0f0"
     assert pio.templates.default == before
+
+
+def test_plotly_figure_renders_through_notebook_mime_path(monkeypatch):
+    displayed = []
+    monkeypatch.setattr(
+        _renderers.ipython_display,
+        "display",
+        lambda bundle, raw: displayed.append((bundle, raw)),
+    )
+    frame = pd.DataFrame({"category": ["a", "b"], "a": [1, 2]})
+    figure = build_figure(frame, _chart_spec("bar"), ThemeContext.fallback("light"))
+
+    pio.show(figure, renderer="plotly_mimetype")
+
+    assert len(displayed) == 1
+    assert displayed[0][1] is True
+    assert "application/vnd.plotly.v1+json" in displayed[0][0]
 
 
 def test_notebook_result_exports_and_renders_pandas_data():

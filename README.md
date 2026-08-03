@@ -47,8 +47,9 @@ installed. The twelve supported types include table, Cartesian charts, bubble,
 box, pie, histogram, heatmap, combo, and counter. Applied configurations persist
 in originating-cell metadata when the bundled JupyterLab 4 companion or the
 separate VS Code companion is available; otherwise the workspace clearly uses
-session-only mode. The visualization extra requires pandas 3.0.5 or newer
-within the pandas 3 release series.
+session-only mode. The visualization extra includes the notebook MIME support
+required by Plotly and requires pandas 3.0.5 or newer within the pandas 3
+release series.
 
 ## Named profile
 
