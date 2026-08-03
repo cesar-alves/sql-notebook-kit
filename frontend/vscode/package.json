@@ -21,16 +21,18 @@
     }]
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.cjs && esbuild src/renderer.ts --bundle --format=iife --outfile=dist/renderer.js",
+    "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.cjs && esbuild src/renderer.ts --bundle --platform=browser --format=esm --outfile=dist/renderer.js",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "pnpm build && vitest run",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": { "@redshift-notebooks/protocol": "workspace:*" },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.100.0",
+    "@types/vscode-notebook-renderer": "^1.72.4",
     "@vscode/vsce": "^3.6.0",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "jsdom": "^20.0.3"
   }
 }
