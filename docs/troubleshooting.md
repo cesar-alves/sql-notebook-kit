@@ -12,6 +12,7 @@
 | Visualization extra warning | Plotly, pandas, ipywidgets, or nbformat is absent | Install or upgrade `redshift-notebooks[viz]` in the active kernel and restart it. |
 | Plotly reports that `nbformat>=4.2.0` is not installed | The kernel has an older visualization extra without its notebook-rendering dependency | Upgrade `redshift-notebooks[viz]` in the active kernel and restart it. |
 | Widget controls render as text | Notebook frontend lacks widget support | Enable ipywidgets support in JupyterLab or select a compatible VS Code kernel. |
+| A saved VS Code visualization asks to be restored | Interactive widget models belong to the kernel session that created them | Run the originating SQL cell. The companion reloads its saved visualization settings against the fresh result. |
 | VS Code installer cannot find an editor | The editor CLI is absent from `PATH` | Add `code`, `code-insiders`, or `codium` to `PATH`, or pass `--cli /path/to/command`. |
 | VS Code changes remain session-only | The companion is missing, disabled, installed in the wrong local/remote extension host, or Microsoft Jupyter is absent | Run `redshift-notebooks vscode status` in the matching terminal, enable Microsoft Jupyter, and reload the window. |
 | VS Code metadata companion does not respond after a kernel error | The installed companion predates serialized callback recovery, or the kernel did not recover within the bounded delivery window | Upgrade and reinstall the companion, reload VS Code, and restart the kernel if it remains unavailable. |

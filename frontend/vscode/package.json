@@ -10,18 +10,32 @@
   "extensionKind": ["workspace"],
   "extensionDependencies": ["ms-toolsai.jupyter"],
   "main": "./dist/extension.cjs",
-  "activationEvents": ["onRenderer:redshift-notebooks-bridge"],
+  "activationEvents": [
+    "onRenderer:redshift-notebooks-bridge",
+    "onRenderer:redshift-notebooks-widget-fallback"
+  ],
   "contributes": {
-    "notebookRenderer": [{
-      "id": "redshift-notebooks-bridge",
-      "displayName": "Redshift Notebooks Visualization Bridge",
-      "entrypoint": "./dist/renderer.js",
-      "mimeTypes": [
-        "application/vnd.redshift-notebooks.bridge+json",
-        "application/vnd.code.notebook.error"
-      ],
-      "requiresMessaging": "always"
-    }],
+    "notebookRenderer": [
+      {
+        "id": "redshift-notebooks-bridge",
+        "displayName": "Redshift Notebooks Visualization Bridge",
+        "entrypoint": "./dist/renderer.js",
+        "mimeTypes": [
+          "application/vnd.redshift-notebooks.bridge+json",
+          "application/vnd.code.notebook.error"
+        ],
+        "requiresMessaging": "always"
+      },
+      {
+        "id": "redshift-notebooks-widget-fallback",
+        "displayName": "Redshift Notebooks Saved Visualization Fallback",
+        "entrypoint": {
+          "extends": "jupyter-ipywidget-renderer",
+          "path": "./dist/widgetFallback.js"
+        },
+        "requiresMessaging": "always"
+      }
+    ],
     "grammars": [{
       "scopeName": "redshift-notebooks.sql-magic",
       "path": "./syntaxes/redshift-sql-magic.tmLanguage.json",
@@ -29,7 +43,7 @@
     }]
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.cjs && esbuild src/renderer.ts --bundle --platform=browser --format=esm --outfile=dist/renderer.js",
+    "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.cjs && esbuild src/renderer.ts --bundle --platform=browser --format=esm --outfile=dist/renderer.js && esbuild src/widgetFallback.ts --bundle --platform=browser --format=esm --outfile=dist/widgetFallback.js",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm build && vitest run",
     "package": "vsce package --no-dependencies"

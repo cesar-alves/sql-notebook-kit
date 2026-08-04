@@ -43,11 +43,12 @@ const request: BridgeMessage = {
   payload: {}
 };
 
-function output(id = 'output') {
+function output(id = 'output', live = true) {
   return {
     id,
     mime: 'application/vnd.redshift-notebooks.bridge+json',
-    json: () => request
+    json: () => request,
+    metadata: live ? { transient: { display_id: 'bridge' } } : {}
   } as never;
 }
 
@@ -103,6 +104,19 @@ describe('VS Code bridge renderer', () => {
       kind: 'dark',
       tokens: { background: '#1e1e1e', text: '#f0f0f0', input_bg: '#313131' }
     });
+    renderer.disposeOutputItem?.();
+  });
+
+  it('ignores a bridge output restored from notebook storage', async () => {
+    const messages: BridgeMessage[] = [];
+    const renderer = activate({
+      postMessage: (message: unknown) => messages.push(message as BridgeMessage)
+    } as never);
+    const element = document.createElement('div');
+    renderer.renderOutputItem(output('saved', false), element, new AbortController().signal);
+    await flushTheme();
+    expect(messages).toEqual([]);
+    expect(element.hidden).toBe(true);
     renderer.disposeOutputItem?.();
   });
 
