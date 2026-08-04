@@ -61,6 +61,8 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
         workspace.notice
     )
     assert "rn-row-notice" in workspace.notice.value
+    assert "rn-export-button" in workspace.export_button._dom_classes
+    assert "rn-export-status" in workspace.export_status.value
 
     chart = spec("histogram", (binding("value", "amount", 1),))
     result.visualizations.add(chart, persist=False)
@@ -69,6 +71,7 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
 
     assert workspace.context_actions.layout.display == "flex"
     assert [button.description for button in workspace.context_actions.children] == [
+        "Export PNG",
         "Edit",
         "Rename",
         "Duplicate",
@@ -98,6 +101,10 @@ def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
     assert "color: var(--rn-text-muted)" in css
     assert ".rn-name-control input" in css
     assert ".rn-options-section .lm-AccordionPanel-title" in css
+    assert ".jupyter-widget-Collapse-header" in css
+    assert "--jp-widgets-input-background-color: var(--rn-input-bg)" in css
+    assert "select option { color-scheme: dark; }" in css
+    assert ".rn-dialog-panel" in css
     assert "background: var(--rn-surface-muted) !important" in css
     assert ".rn-viz-workspace.rn-theme-dark" in css
 

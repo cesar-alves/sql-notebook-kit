@@ -50,9 +50,14 @@ session.register(login=True, visualization=True)
 the first query.
 
 ```sql
-%%sql
+%sql
 select current_user, current_database()
 ```
+
+Use `%sql select current_user` for a one-line query. A standalone `%sql` first
+line, as above, marks the rest of the cell as multiline SQL. Existing `%%sql`
+cells remain fully supported. All three forms use the same bounded-result and
+failed-transaction recovery behavior.
 
 SELECT results render as a workspace with the bounded **Table**, multiple named
 visualizations, and a **+** tab action when the `viz` extra is
@@ -100,9 +105,11 @@ session.dispose()     # close JupySQL and pooled resources
 ```
 
 Failed SQL statements are never automatically replayed. This avoids repeating
-writes after an ambiguous network failure. When a managed `%%sql` cell reaches
+writes after an ambiguous network failure. When a managed SQL cell reaches
 the database and fails, its active transaction is rolled back so later cells
-can continue. This also ends any explicit transaction opened across cells.
+can continue. The concise Redshift message is shown first, with the SQL and a
+sanitized traceback under **Technical details**. This also ends any explicit
+transaction opened across cells.
 
 ## Compatibility APIs
 

@@ -11,3 +11,21 @@
   --rn-focus: var(--jp-brand-color1, #0550ae);
   --rn-danger: var(--jp-error-color1, #cf222e);
 }
+
+.rn-sql-error {
+  color: var(--jp-ui-font-color1, #1f2328);
+  background: var(--jp-layout-color1, #fff);
+  border-left: 3px solid var(--jp-error-color1, #cf222e);
+  padding: 8px 12px;
+}
+
+.rn-sql-error-summary { color: var(--jp-error-color1, #cf222e); font-weight: 600; }
+.rn-sql-error details { margin-top: 6px; }
+.rn-sql-error summary { cursor: pointer; color: var(--jp-ui-font-color1, #1f2328); }
+.rn-sql-error pre {
+  color: var(--jp-ui-font-color1, #1f2328);
+  background: var(--jp-layout-color2, #f6f8fa);
+  border: 1px solid var(--jp-border-color1, #d0d7de);
+  margin: 8px 0 0; max-height: 24rem; overflow: auto; padding: 8px;
+  white-space: pre-wrap;
+}

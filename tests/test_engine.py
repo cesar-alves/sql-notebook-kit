@@ -5,7 +5,13 @@ import pandas as pd
 import pytest
 
 from redshift_notebooks.engine import make_engine, register
-from redshift_notebooks.notebook import _is_database_execution_error, _visualization_available
+from redshift_notebooks.errors import SQLExecutionError
+from redshift_notebooks.notebook import (
+    _is_database_execution_error,
+    _rewrite_standalone_percent_sql,
+    _sql_error_summary,
+    _visualization_available,
+)
 from redshift_notebooks.results import NotebookResult
 from redshift_notebooks.session import create_session
 
@@ -151,6 +157,34 @@ def test_session_wraps_sql_cell_results_with_a_bounded_dataframe():
     session.dispose()
 
 
+def test_session_wraps_line_magic_results_and_standalone_percent_sql_cells():
+    ipython_testing = pytest.importorskip("IPython.testing.globalipapp")
+    shell = ipython_testing.get_ipython()
+    session = create_session(factory=lambda: sqlite3.connect(":memory:"), dialect="sqlite")
+    session.register(alias="both_magics", visualization=True, max_rows=1)
+
+    line = shell.run_cell("%sql select 1 as x union all select 2 order by x")
+    multiline = shell.run_cell("%sql\nselect 3 as x union all select 4 order by x")
+
+    assert isinstance(line.result, NotebookResult)
+    assert line.result.dataframe["x"].tolist() == [1]
+    assert line.result.truncated is True
+    assert isinstance(multiline.result, NotebookResult)
+    assert multiline.result.dataframe["x"].tolist() == [3]
+    assert multiline.result.truncated is True
+    session.dispose()
+
+
+def test_standalone_percent_sql_transform_is_narrow_and_idempotent():
+    transformed = _rewrite_standalone_percent_sql(["%sql\n", "select 1\n"])
+    assert transformed == ["%%sql\n", "select 1\n"]
+    assert _rewrite_standalone_percent_sql(transformed) == transformed
+    assert _rewrite_standalone_percent_sql(["%sql select 1\n", "value = 2\n"]) == [
+        "%sql select 1\n",
+        "value = 2\n",
+    ]
+
+
 @pytest.mark.parametrize("visualization", [False, True])
 def test_failed_sql_cell_rolls_back_before_the_next_cell(visualization):
     ipython_testing = pytest.importorskip("IPython.testing.globalipapp")
@@ -161,7 +195,7 @@ def test_failed_sql_cell_rolls_back_before_the_next_cell(visualization):
     session.register(alias=alias, visualization=visualization, max_rows=1)
     rollback_calls_before_error = connection.rollback_calls
 
-    with pytest.raises(Exception, match="missing_table"):
+    with pytest.raises(SQLExecutionError, match="missing_table"):
         shell.run_cell_magic("sql", "", "select * from missing_table")
 
     assert connection.rollback_calls == rollback_calls_before_error + 1
@@ -178,6 +212,14 @@ def test_non_database_errors_do_not_trigger_sql_recovery():
     assert _is_database_execution_error(ValueError("not a database error")) is False
 
 
+def test_redshift_error_summary_uses_driver_message_and_sqlstate():
+    driver_error = RuntimeError({"M": "column does not exist", "C": "42703", "P": "8"})
+    wrapped = __import__("sqlalchemy").exc.DBAPIError.instance(
+        "select missing", {}, driver_error, RuntimeError
+    )
+    assert _sql_error_summary(wrapped) == "column does not exist (SQLSTATE 42703)"
+
+
 def test_rollback_failure_warns_without_replacing_the_sql_error():
     ipython_testing = pytest.importorskip("IPython.testing.globalipapp")
     shell = ipython_testing.get_ipython()
@@ -187,7 +229,7 @@ def test_rollback_failure_warns_without_replacing_the_sql_error():
 
     with (
         pytest.warns(UserWarning, match=r"could not roll back.*session\.reconnect"),
-        pytest.raises(Exception, match="missing_table"),
+        pytest.raises(SQLExecutionError, match="missing_table"),
     ):
         shell.run_cell_magic("sql", "", "select * from missing_table")
 

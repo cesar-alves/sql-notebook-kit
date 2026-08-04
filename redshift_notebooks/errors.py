@@ -26,6 +26,19 @@ class NotebookConnectionError(RedshiftNotebooksError):
     """A factory failed to return a usable DBAPI connection."""
 
 
+class SQLExecutionError(RedshiftNotebooksError):
+    """A managed SQL magic failed during database execution.
+
+    ``statement`` is retained for the expandable notebook diagnostic while
+    ``str(error)`` stays concise. Bound parameter values are deliberately not
+    stored on this exception.
+    """
+
+    def __init__(self, message: str, *, statement: str | None = None) -> None:
+        self.statement = statement
+        super().__init__(message)
+
+
 class MissingOptionalDependencyError(RedshiftNotebooksError, ImportError):
     """An optional package extra is required for the requested feature."""
 

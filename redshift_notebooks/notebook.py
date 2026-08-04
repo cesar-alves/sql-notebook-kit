@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlalchemy.exc import DBAPIError
 
-from redshift_notebooks.errors import ConfigurationError
+from redshift_notebooks.errors import ConfigurationError, SQLExecutionError
 from redshift_notebooks.results import NotebookResult
 
 _ALIAS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
@@ -73,8 +73,8 @@ def _detach_result(
     )
 
 
-def _is_database_execution_error(exc: BaseException) -> bool:
-    """Return whether an exception chain contains a SQLAlchemy DBAPI error."""
+def _database_execution_error(exc: BaseException) -> DBAPIError | None:
+    """Return the SQLAlchemy DBAPI error in an exception chain, if present."""
     pending: list[BaseException] = [exc]
     seen: set[int] = set()
     while pending:
@@ -83,12 +83,40 @@ def _is_database_execution_error(exc: BaseException) -> bool:
             continue
         seen.add(id(current))
         if isinstance(current, DBAPIError):
-            return True
+            return current
         if current.__cause__ is not None:
             pending.append(current.__cause__)
         if current.__context__ is not None:
             pending.append(current.__context__)
-    return False
+    return None
+
+
+def _is_database_execution_error(exc: BaseException) -> bool:
+    """Return whether an exception chain contains a SQLAlchemy DBAPI error."""
+    return _database_execution_error(exc) is not None
+
+
+def _sql_error_summary(exc: DBAPIError) -> str:
+    """Extract Redshift's concise message and SQLSTATE without query parameters."""
+    original = exc.orig
+    payload = original.args[0] if getattr(original, "args", ()) else None
+    if isinstance(payload, dict):
+        message = payload.get("M") or payload.get("message") or payload.get("Message")
+        code = payload.get("C") or payload.get("code") or payload.get("sqlstate")
+        if message:
+            summary = str(message).strip()
+            return f"{summary} (SQLSTATE {code})" if code else summary
+    original_text = str(original).strip()
+    if original_text:
+        return original_text.splitlines()[0]
+    return "The SQL statement could not be executed."
+
+
+def _rewrite_standalone_percent_sql(lines: list[str]) -> list[str]:
+    """Treat a standalone first-line ``%sql`` marker as multiline SQL."""
+    if len(lines) > 1 and lines[0].strip() == "%sql":
+        return [lines[0].replace("%sql", "%%sql", 1), *lines[1:]]
+    return lines
 
 
 def _rollback_registered_connection(state: _NotebookState) -> None:
@@ -112,19 +140,35 @@ def _rollback_registered_connection(state: _NotebookState) -> None:
 def _install_session_sql_magic(ipython: Any, state: _NotebookState) -> None:
     ipython._redshift_notebooks_state = state
 
-    def bounded_sql(line: str, cell: str) -> Any:
+    if not getattr(ipython, "_redshift_notebooks_transformer_installed", False):
+        ipython.input_transformers_cleanup.append(_rewrite_standalone_percent_sql)
+        ipython._redshift_notebooks_transformer_installed = True
+
+    def execute(line: str, cell: str | None) -> Any:
         active_state = ipython._redshift_notebooks_state
-        jupysql_magic = ipython.find_cell_magic("jupysql")
+        jupysql_magic = (
+            ipython.find_cell_magic("jupysql")
+            if cell is not None
+            else ipython.find_line_magic("jupysql")
+        )
         magic_owner = jupysql_magic.__self__
         old_autolimit = magic_owner.autolimit
         if active_state.detach_results:
             magic_owner.autolimit = active_state.max_rows + 1
         try:
             try:
-                raw = ipython.run_cell_magic("jupysql", line, cell)
+                raw = (
+                    ipython.run_cell_magic("jupysql", line, cell)
+                    if cell is not None
+                    else ipython.run_line_magic("jupysql", line)
+                )
             except Exception as exc:
-                if _is_database_execution_error(exc):
+                database_error = _database_execution_error(exc)
+                if database_error is not None:
                     _rollback_registered_connection(active_state)
+                    raise SQLExecutionError(
+                        _sql_error_summary(database_error), statement=database_error.statement
+                    ) from exc
                 raise
             if active_state.detach_results:
                 parent: Any = getattr(ipython, "get_parent", lambda: {})() or {}
@@ -144,7 +188,14 @@ def _install_session_sql_magic(ipython: Any, state: _NotebookState) -> None:
         finally:
             magic_owner.autolimit = old_autolimit
 
-    ipython.register_magic_function(bounded_sql, magic_kind="cell", magic_name="sql")
+    def bounded_cell_sql(line: str, cell: str) -> Any:
+        return execute(line, cell)
+
+    def bounded_line_sql(line: str) -> Any:
+        return execute(line, None)
+
+    ipython.register_magic_function(bounded_cell_sql, magic_kind="cell", magic_name="sql")
+    ipython.register_magic_function(bounded_line_sql, magic_kind="line", magic_name="sql")
 
 
 def register_session(

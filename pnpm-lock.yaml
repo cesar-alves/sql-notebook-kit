@@ -17,18 +17,33 @@ importers:
 
   frontend/jupyterlab:
     dependencies:
+      '@codemirror/lang-sql':
+        specifier: ^6.10.0
+        version: 6.10.0
       '@jupyterlab/application':
         specifier: ^4.4.0
         version: 4.5.10(react@18.3.1)
       '@jupyterlab/apputils':
         specifier: ^4.4.0
         version: 4.6.10
+      '@jupyterlab/codemirror':
+        specifier: ^4.4.0
+        version: 4.5.10(react@18.3.1)
       '@jupyterlab/notebook':
         specifier: ^4.4.0
         version: 4.5.10
+      '@jupyterlab/rendermime':
+        specifier: ^4.4.0
+        version: 4.5.10(react@18.3.1)
+      '@jupyterlab/rendermime-interfaces':
+        specifier: ^3.12.0
+        version: 3.13.10
       '@jupyterlab/services':
         specifier: ^7.4.0
         version: 7.5.10(react@18.3.1)
+      '@lumino/widgets':
+        specifier: ^2.6.0
+        version: 2.9.0
       '@redshift-notebooks/protocol':
         specifier: workspace:*
         version: link:../protocol
