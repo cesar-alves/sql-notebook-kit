@@ -47,6 +47,7 @@ def make_engine(
             max_overflow=0,
             pool_timeout=pool_timeout,
             pool_pre_ping=True,
+            hide_parameters=True,
         )
     except (ImportError, NoSuchModuleError) as exc:
         if dialect == DEFAULT_DIALECT:

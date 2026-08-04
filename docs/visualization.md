@@ -24,16 +24,18 @@ required VS Code extension; browser-only `vscode.dev` is not supported.
 VSCodium users must make the `ms-toolsai.jupyter` extension ID available in
 their configured extension registry or install its compatible VSIX first.
 
-With `visualization=True`, every `%%sql` result becomes a bounded
+With `visualization=True`, every managed `%sql` or `%%sql` result becomes a bounded
 `NotebookResult`. Its first tab is the unmodified local table. Use **Add
 visualization** through the adjacent **+** action to create named bar, line,
 area, scatter, bubble, box, pie,
 histogram, heatmap, combo, counter, or table visualizations.
 
-Visualization tabs expose compact **Edit**, **Rename**, **Duplicate**, and
-**Delete** buttons. The result row count appears below the active content, and
-table columns size themselves from their returned values before sharing any
-remaining width.
+Visualization tabs expose compact **Export PNG**, **Edit**, **Rename**,
+**Duplicate**, and **Delete** buttons. Export opens the JupyterLab browser or VS
+Code save picker. When a browser cannot choose a location, the companion copies
+the image to the clipboard and finally falls back to a normal download. The
+result row count appears below the active content, and table columns size
+themselves from their returned values before sharing any remaining width.
 
 ```python
 result.dataframe
@@ -126,7 +128,7 @@ execute-request metadata. Neither frontend edits `.ipynb` files directly.
 
 The workspace follows JupyterLab or VS Code light, dark, and high-contrast
 themes without changing notebook metadata. Plotly modebars remain enabled for
-zoom, pan, reset, legend interaction, and PNG download. Controls have keyboard
+zoom, pan, reset, legend interaction, and secondary PNG download. Controls have keyboard
 focus, programmatic labels, live validation status, and a responsive layout for
 640-pixel notebook outputs and 200% browser zoom. Visualization name fields and
 the expandable Options section use the active theme's input, surface, text,
@@ -156,8 +158,8 @@ saves. The toolbar provides:
 - writable, connecting, and session-only persistence states; and
 - save acknowledgement, conflict, and failure responses after a workspace edit.
 
-For a manual visual pass, exercise add, preview, apply, edit, rename, duplicate,
-delete, cancel, and reset. Repeat the editor flow at 640 pixels and 200% zoom,
+For a manual visual pass, exercise add, preview, apply, export, edit, rename,
+duplicate, delete, cancel, and reset. Repeat the editor flow at 640 pixels and 200% zoom,
 then switch themes while the table, a chart, and the editor preview are visible.
 Confirm keyboard focus remains visible, status messages are announced, and the
 Plotly modebar and legend interactions still work.

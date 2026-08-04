@@ -2,6 +2,12 @@
 
 ## 0.1.0
 
+- Support managed one-line and standalone-marker multiline `%sql` alongside
+  `%%sql`, add Redshift-aware editor highlighting, and collapse sanitized SQL
+  diagnostics behind the concise Redshift message.
+- Complete dark/high-contrast styling for current ipywidgets controls and add
+  toolbar PNG export through JupyterLab and VS Code save surfaces.
+
 - Bundle the hardened VS Code companion in the Python wheel and add
   `redshift-notebooks vscode install/status/path` commands.
 - Correct VS Code cell matching and transport, validate bridge messages, and

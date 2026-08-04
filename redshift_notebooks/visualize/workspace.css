@@ -7,11 +7,27 @@
   color: var(--rn-text); background: var(--rn-bg); font: inherit;
   border: 0; border-radius: 0; padding: 8px;
   box-sizing: border-box;
+  --jp-widgets-color: var(--rn-text);
+  --jp-widgets-input-color: var(--rn-text);
+  --jp-widgets-input-background-color: var(--rn-input-bg);
+  --jp-widgets-input-border-color: var(--rn-border);
+  --jp-widgets-input-focus-border-color: var(--rn-focus);
+  --jp-layout-color1: var(--rn-surface);
+  --jp-layout-color2: var(--rn-surface-muted);
+  --jp-ui-font-color0: var(--rn-text);
+  --jp-ui-font-color1: var(--rn-text);
+  --jp-ui-font-color2: var(--rn-text-muted);
+  --jp-border-color1: var(--rn-border);
 }
 .rn-viz-workspace * { box-sizing: border-box; }
 .rn-viz-workspace button, .rn-viz-workspace input, .rn-viz-workspace select {
   color: var(--rn-text) !important; background: var(--rn-input-bg) !important;
   border-color: var(--rn-border) !important;
+}
+.rn-viz-workspace select,
+.rn-viz-workspace select option { color-scheme: light; }
+.rn-viz-workspace select option {
+  color: var(--rn-text); background: var(--rn-surface-raised);
 }
 .rn-viz-workspace :focus-visible {
   outline: 2px solid var(--rn-focus) !important; outline-offset: 2px !important;
@@ -35,6 +51,10 @@
   border-color: var(--rn-accent) !important;
 }
 .rn-viz-workspace .rn-context-actions { gap: 4px; }
+.rn-viz-workspace .rn-export-status:empty { display: none; }
+.rn-viz-workspace .rn-export-status {
+  color: var(--rn-text-muted); min-height: 1.25rem; padding-top: 2px;
+}
 .rn-viz-workspace button.rn-context-action {
   font-size: 0.85rem; min-width: auto; padding: 2px 7px;
 }
@@ -85,6 +105,22 @@
   color: var(--rn-text) !important; background: var(--rn-surface) !important;
   border-color: var(--rn-border) !important;
 }
+.rn-viz-workspace .rn-options-section .jupyter-widget-Collapse,
+.rn-viz-workspace .rn-options-section .jupyter-widget-Collapse-contents {
+  color: var(--rn-text) !important; background: var(--rn-surface) !important;
+  border-color: var(--rn-border) !important;
+}
+.rn-viz-workspace .rn-options-section .jupyter-widget-Collapse-header {
+  color: var(--rn-text) !important; background: var(--rn-surface-muted) !important;
+  border-color: var(--rn-border) !important;
+}
+.rn-viz-workspace .rn-options-section .jupyter-widget-Collapse-header:hover,
+.rn-viz-workspace .rn-options-section .jupyter-widget-Collapse-open > .jupyter-widget-Collapse-header {
+  color: var(--rn-text) !important; background: var(--rn-selection-bg) !important;
+}
+.rn-viz-workspace .rn-options-section .jupyter-widget-Collapse-header:focus-visible {
+  outline: 2px solid var(--rn-focus) !important; outline-offset: -2px !important;
+}
 .rn-viz-workspace .rn-options-section .p-AccordionPanel-title,
 .rn-viz-workspace .rn-options-section .lm-AccordionPanel-title {
   color: var(--rn-text) !important; background: var(--rn-surface-muted) !important;
@@ -112,6 +148,12 @@
 .rn-editor {
   display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); gap: 12px;
 }
+.rn-viz-workspace .rn-editor-panel,
+.rn-viz-workspace .rn-dialog-panel {
+  color: var(--rn-text); background: var(--rn-surface-raised);
+  border: 1px solid var(--rn-border); border-radius: 4px; padding: 12px;
+}
+.rn-viz-workspace .rn-dialog-panel { gap: 8px; max-width: 32rem; }
 @media (max-width: 640px) { .rn-editor { grid-template-columns: 1fr; } }
 .rn-viz-workspace.rn-theme-dark,
 .rn-viz-workspace.rn-theme-high-contrast {
@@ -121,6 +163,10 @@
   --rn-focus: #75beff; --rn-danger: #f48771; --rn-warning-bg: #3b2e00;
   --rn-warning-text: #ffd866; --rn-selection-bg: #063b49; --rn-input-bg: #313131;
 }
+.rn-viz-workspace.rn-theme-dark select,
+.rn-viz-workspace.rn-theme-dark select option,
+.rn-viz-workspace.rn-theme-high-contrast select,
+.rn-viz-workspace.rn-theme-high-contrast select option { color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
   .rn-viz-workspace:not(.rn-theme-light) {
     --rn-bg: #1e1e1e; --rn-surface: #252526; --rn-surface-muted: #313131;

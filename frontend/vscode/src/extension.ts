@@ -31,6 +31,53 @@ const coordinators = new Map<string, DeliveryCoordinator>();
 const keyFor = (notebook: vscode.NotebookDocument, cellId: string) =>
   `${notebook.uri.toString()}\n${cellId}`;
 
+interface ExportPngRequest {
+  kind: 'export_png';
+  requestId: string;
+  filename: string;
+  base64: string;
+}
+
+function isExportPngRequest(value: unknown): value is ExportPngRequest {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<ExportPngRequest>;
+  return item.kind === 'export_png' &&
+    typeof item.requestId === 'string' && item.requestId.length <= 80 &&
+    typeof item.filename === 'string' && item.filename.length <= 104 &&
+    typeof item.base64 === 'string' && item.base64.length <= 34_000_000;
+}
+
+async function saveExport(
+  channel: vscode.NotebookRendererMessaging,
+  event: { editor: vscode.NotebookEditor; message: unknown }
+): Promise<boolean> {
+  if (!isExportPngRequest(event.message)) return false;
+  const request = event.message;
+  let status: 'saved' | 'canceled' | 'failed' = 'failed';
+  try {
+    const target = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file(request.filename),
+      filters: { 'PNG image': ['png'] },
+      saveLabel: 'Export PNG'
+    });
+    if (!target) status = 'canceled';
+    else {
+      const bytes = Buffer.from(request.base64, 'base64');
+      if (bytes.length < 8 || !bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))) {
+        throw new Error('Renderer returned an invalid PNG.');
+      }
+      await vscode.workspace.fs.writeFile(target, bytes);
+      status = 'saved';
+    }
+  } catch (error) {
+    console.error('Redshift Notebooks PNG export failed.', error);
+  }
+  await channel.postMessage({
+    kind: 'export_png_result', requestId: request.requestId, status, filename: request.filename
+  }, event.editor);
+  return true;
+}
+
 async function activeKernel(notebook: vscode.NotebookDocument): Promise<JupyterKernel | undefined> {
   const extension = vscode.extensions.getExtension<JupyterApi>('ms-toolsai.jupyter');
   if (!extension) return undefined;
@@ -147,6 +194,7 @@ async function handleMessage(event: {
     const writable = vscode.workspace.fs.isWritableFileSystem(notebook.uri.scheme) !== false;
     queueDelivery(notebook, response(request, 'capabilities_result', {
       persistence: writable,
+      png_export: true,
       reason: writable ? undefined : 'The notebook file system is read-only.'
     }));
     return;
@@ -193,7 +241,7 @@ async function handleMessage(event: {
 export function activate(context: vscode.ExtensionContext): void {
   const channel = vscode.notebooks.createRendererMessaging('redshift-notebooks-bridge');
   context.subscriptions.push(channel.onDidReceiveMessage(event => {
-    void handleMessage(event).catch(error => {
+    void saveExport(channel, event).then(handled => handled ? undefined : handleMessage(event)).catch(error => {
       console.error('Redshift Notebooks bridge request failed.', error);
     });
   }));

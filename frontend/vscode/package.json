@@ -5,7 +5,7 @@
   "publisher": "redshift-notebooks",
   "license": "MIT",
   "repository": "https://github.com/cesar-alves/redshift-notebooks",
-  "files": ["dist", "LICENSE"],
+  "files": ["dist", "syntaxes", "LICENSE"],
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["workspace"],
   "extensionDependencies": ["ms-toolsai.jupyter"],
@@ -16,8 +16,16 @@
       "id": "redshift-notebooks-bridge",
       "displayName": "Redshift Notebooks Visualization Bridge",
       "entrypoint": "./dist/renderer.js",
-      "mimeTypes": ["application/vnd.redshift-notebooks.bridge+json"],
+      "mimeTypes": [
+        "application/vnd.redshift-notebooks.bridge+json",
+        "application/vnd.code.notebook.error"
+      ],
       "requiresMessaging": "always"
+    }],
+    "grammars": [{
+      "scopeName": "redshift-notebooks.sql-magic",
+      "path": "./syntaxes/redshift-sql-magic.tmLanguage.json",
+      "injectTo": ["source.python"]
     }]
   },
   "scripts": {

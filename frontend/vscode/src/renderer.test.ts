@@ -44,7 +44,19 @@ const request: BridgeMessage = {
 };
 
 function output(id = 'output') {
-  return { id, json: () => request } as never;
+  return {
+    id,
+    mime: 'application/vnd.redshift-notebooks.bridge+json',
+    json: () => request
+  } as never;
+}
+
+function errorOutput(value: Record<string, unknown>) {
+  return {
+    id: 'error',
+    mime: 'application/vnd.code.notebook.error',
+    json: () => value
+  } as never;
 }
 
 async function flushTheme(): Promise<void> {
@@ -91,6 +103,7 @@ describe('VS Code bridge renderer', () => {
       kind: 'dark',
       tokens: { background: '#1e1e1e', text: '#f0f0f0', input_bg: '#313131' }
     });
+    renderer.disposeOutputItem?.();
   });
 
   it('prefers resolved VS Code tokens and reports high contrast from either host signal', async () => {
@@ -110,6 +123,7 @@ describe('VS Code bridge renderer', () => {
       kind: 'high_contrast',
       tokens: { background: '#123456', text: '#abcdef' }
     });
+    renderer.disposeOutputItem?.();
   });
 
   it('sends live theme changes and removes all listeners when every output is disposed', async () => {
@@ -144,5 +158,49 @@ describe('VS Code bridge renderer', () => {
     expect(media.listeners).toHaveLength(1);
     renderer.disposeOutputItem?.('two');
     expect(media.listeners).toHaveLength(0);
+    renderer.disposeOutputItem?.();
+  });
+
+  it('renders managed SQL errors with collapsed technical details', () => {
+    const renderer = activate({ postMessage: vi.fn() } as never);
+    const element = document.createElement('div');
+    renderer.renderOutputItem(errorOutput({
+      name: 'SQLExecutionError',
+      message: 'column missing (SQLSTATE 42703)',
+      stack: 'sanitized traceback'
+    }), element, new AbortController().signal);
+
+    expect(element.querySelector('.rn-sql-error-summary')?.textContent)
+      .toBe('column missing (SQLSTATE 42703)');
+    expect(element.querySelector('details')?.hasAttribute('open')).toBe(false);
+    expect(element.querySelector('pre')?.textContent).toBe('sanitized traceback');
+    renderer.disposeOutputItem?.();
+  });
+
+  it('exports the visible Plotly chart at 2x through renderer messaging', async () => {
+    vi.useRealTimers();
+    const messages: unknown[] = [];
+    const toImage = vi.fn().mockResolvedValue('data:image/png;base64,iVBORw0KGgo=');
+    vi.stubGlobal('Plotly', { toImage });
+    const renderer = activate({ postMessage: (message: unknown) => messages.push(message) } as never);
+    renderer.renderOutputItem(output(), document.createElement('div'), new AbortController().signal);
+
+    const root = document.createElement('div');
+    root.className = 'rn-viz-workspace';
+    root.innerHTML = `
+      <button class="rn-export-button">Export PNG</button>
+      <div class="rn-tabs"><button aria-pressed="true">Revenue / region</button></div>
+      <div class="js-plotly-plot"></div>
+      <div class="rn-export-status"></div>`;
+    document.body.appendChild(root);
+    (root.querySelector('.rn-export-button') as HTMLButtonElement).click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(toImage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scale: 2 }));
+    expect(messages.find(item => (item as { kind?: string }).kind === 'export_png'),
+      root.querySelector('.rn-export-status')?.textContent ?? '').toMatchObject({
+      kind: 'export_png', filename: 'Revenue - region.png', base64: 'iVBORw0KGgo='
+    });
+    renderer.disposeOutputItem?.();
   });
 });

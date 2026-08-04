@@ -63,6 +63,12 @@ class VisualizationWorkspace:
         self.add_button = widgets.Button(description="+", tooltip="Add visualization")
         self.add_button.add_class("rn-add-tab")
         self.add_button.on_click(self._open_add)
+        self.export_button = widgets.Button(
+            description="Export PNG",
+            icon="download",
+            tooltip="Export rendered visualization as PNG",
+        )
+        self.export_button.add_class("rn-export-button")
         self.edit_button = widgets.Button(description="Edit", icon="edit", tooltip="Edit")
         self.rename_button = widgets.Button(
             description="Rename", icon="pencil", tooltip="Rename"
@@ -78,6 +84,7 @@ class VisualizationWorkspace:
         self.duplicate_button.on_click(self._duplicate_active)
         self.delete_button.on_click(self._delete_active)
         for button in (
+            self.export_button,
             self.edit_button,
             self.rename_button,
             self.duplicate_button,
@@ -87,6 +94,7 @@ class VisualizationWorkspace:
         self.delete_button.add_class("rn-context-danger")
         self.context_actions = widgets.HBox(
             [
+                self.export_button,
                 self.edit_button,
                 self.rename_button,
                 self.duplicate_button,
@@ -101,11 +109,15 @@ class VisualizationWorkspace:
         self.toolbar.add_class("rn-workspace-toolbar")
         self.output = widgets.Output()
         self.status = widgets.HTML('<div role="status" aria-live="polite"></div>')
+        self.export_status = widgets.HTML(
+            '<div class="rn-export-status" role="status" aria-live="polite"></div>'
+        )
         self.body = widgets.VBox([self.output])
         self.root = widgets.VBox(
             [
                 self.css,
                 self.toolbar,
+                self.export_status,
                 self.status,
                 self.body,
                 self.notice,
@@ -258,31 +270,31 @@ class VisualizationWorkspace:
 
         save.on_click(commit)
         cancel.on_click(lambda _: setattr(self.body, "children", (self.output,)))
-        self.body.children = (
-            self.widgets.VBox(
-                [
-                    self.widgets.HTML("<h4>Rename visualization</h4>"),
-                    name,
-                    self.widgets.HBox([cancel, save]),
-                ]
-            ),
+        panel = self.widgets.VBox(
+            [
+                self.widgets.HTML("<h4>Rename visualization</h4>"),
+                name,
+                self.widgets.HBox([cancel, save]),
+            ]
         )
+        panel.add_class("rn-dialog-panel")
+        self.body.children = (panel,)
 
     def _confirm_delete(self, current: VisualizationSpec) -> None:
         delete = self.widgets.Button(description="Delete", button_style="danger")
         cancel = self.widgets.Button(description="Cancel")
         delete.on_click(lambda _: self._delete(current))
         cancel.on_click(lambda _: setattr(self.body, "children", (self.output,)))
-        self.body.children = (
-            self.widgets.VBox(
-                [
-                    self.widgets.HTML(
-                        f'<div role="alert">Delete “{html.escape(current.name)}”?</div>'
-                    ),
-                    self.widgets.HBox([cancel, delete]),
-                ]
-            ),
+        panel = self.widgets.VBox(
+            [
+                self.widgets.HTML(
+                    f'<div role="alert">Delete “{html.escape(current.name)}”?</div>'
+                ),
+                self.widgets.HBox([cancel, delete]),
+            ]
         )
+        panel.add_class("rn-dialog-panel")
+        self.body.children = (panel,)
 
     def _delete(self, current: VisualizationSpec) -> None:
         self.manager.delete(current.id)
@@ -325,6 +337,7 @@ class VisualizationWorkspace:
                 widgets.HBox([reset, cancel, apply]),
             ]
         )
+        panel.add_class("rn-editor-panel")
         editor = widgets.HBox([self.preview, panel])
         editor.add_class("rn-editor")
         self.body.children = (editor,)
