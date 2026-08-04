@@ -28,8 +28,10 @@ def test_bundled_vscode_extension_matches_python_version():
     with zipfile.ZipFile(vsix) as archive:
         package = __import__("json").loads(archive.read("extension/package.json"))
         renderer = archive.read("extension/dist/renderer.js")
+        widget_fallback = archive.read("extension/dist/widgetFallback.js")
     assert package["version"] == project["version"]
     assert package["extensionDependencies"] == ["ms-toolsai.jupyter"]
     assert package["extensionKind"] == ["workspace"]
     assert b"export {" in renderer
     assert b"activate" in renderer
+    assert b"jupyter-ipywidget-renderer" in widget_fallback

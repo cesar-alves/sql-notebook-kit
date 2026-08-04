@@ -124,6 +124,11 @@ returns acknowledgements through the stable Jupyter extension kernel API after
 the kernel becomes idle. Existing VS Code metadata is restored from the cell's
 execute-request metadata. Neither frontend edits `.ipynb` files directly.
 
+VS Code does not persist a live ipywidgets model across kernel sessions. When a
+notebook is reopened, the companion replaces this package's stale widget output
+with a rerun placeholder. Running the originating SQL cell rebuilds the widget
+from fresh bounded data and restores the saved collection from cell metadata.
+
 ## Themes and accessibility
 
 The workspace follows JupyterLab or VS Code light, dark, and high-contrast

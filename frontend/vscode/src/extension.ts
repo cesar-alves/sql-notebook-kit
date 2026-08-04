@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 import { Buffer } from 'node:buffer';
 import {
-  collectionFromMetadata,
   isBridgeMessage,
   isCollection,
-  metadataWithCollection,
   type BridgeMessage,
   type Collection
 } from '@redshift-notebooks/protocol';
+import {
+  cellMetadataWithCollection,
+  collectionFromCellMetadata
+} from './cellMetadata.js';
 import {
   DeliveryCoordinator,
   executeWithTimeout,
@@ -15,6 +17,7 @@ import {
   waitForReadyKernel,
   type DeliveryKernel
 } from './delivery.js';
+import { managedWidgetCell } from './widgetState.js';
 
 interface JupyterKernel {
   readonly status: string;
@@ -28,6 +31,8 @@ interface JupyterApi {
 
 const sessions = new Map<string, string>();
 const coordinators = new Map<string, DeliveryCoordinator>();
+const kernelSubscriptions = new Map<string, vscode.Disposable[]>();
+const watchedKernels = new Map<string, WeakSet<object>>();
 const keyFor = (notebook: vscode.NotebookDocument, cellId: string) =>
   `${notebook.uri.toString()}\n${cellId}`;
 
@@ -36,6 +41,20 @@ interface ExportPngRequest {
   requestId: string;
   filename: string;
   base64: string;
+}
+
+interface WidgetStateRequest {
+  kind: 'widget_state';
+  requestId: string;
+  modelId: string;
+}
+
+function isWidgetStateRequest(value: unknown): value is WidgetStateRequest {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<WidgetStateRequest>;
+  return item.kind === 'widget_state' &&
+    typeof item.requestId === 'string' && item.requestId.length <= 80 &&
+    typeof item.modelId === 'string' && item.modelId.length <= 128;
 }
 
 function isExportPngRequest(value: unknown): value is ExportPngRequest {
@@ -82,7 +101,28 @@ async function activeKernel(notebook: vscode.NotebookDocument): Promise<JupyterK
   const extension = vscode.extensions.getExtension<JupyterApi>('ms-toolsai.jupyter');
   if (!extension) return undefined;
   const api = extension.isActive ? extension.exports : await extension.activate();
-  return api?.kernels.getKernel(notebook.uri);
+  const kernel = await api?.kernels.getKernel(notebook.uri);
+  if (kernel) watchKernel(notebook, kernel);
+  return kernel;
+}
+
+function clearSessions(notebook: vscode.NotebookDocument): void {
+  const prefix = `${notebook.uri.toString()}\n`;
+  for (const key of sessions.keys()) if (key.startsWith(prefix)) sessions.delete(key);
+}
+
+function watchKernel(notebook: vscode.NotebookDocument, kernel: JupyterKernel): void {
+  const notebookKey = notebook.uri.toString();
+  const subscriptions = kernelSubscriptions.get(notebookKey) ?? [];
+  const watched = watchedKernels.get(notebookKey) ?? new WeakSet<object>();
+  if (watched.has(kernel)) return;
+  watched.add(kernel);
+  watchedKernels.set(notebookKey, watched);
+  const subscription = kernel.onDidChangeStatus(status => {
+    if (['restarting', 'terminating', 'dead'].includes(status)) clearSessions(notebook);
+  });
+  subscriptions.push(subscription);
+  kernelSubscriptions.set(notebookKey, subscriptions);
 }
 
 function adaptKernel(kernel: JupyterKernel): DeliveryKernel {
@@ -159,13 +199,20 @@ function closeNotebook(notebook: vscode.NotebookDocument): void {
   const notebookKey = notebook.uri.toString();
   coordinators.get(notebookKey)?.close();
   coordinators.delete(notebookKey);
-  const prefix = `${notebookKey}\n`;
-  for (const key of sessions.keys()) if (key.startsWith(prefix)) sessions.delete(key);
+  clearSessions(notebook);
+  for (const subscription of kernelSubscriptions.get(notebookKey) ?? []) subscription.dispose();
+  kernelSubscriptions.delete(notebookKey);
+  watchedKernels.delete(notebookKey);
 }
 
 function closeAll(): void {
   for (const coordinator of coordinators.values()) coordinator.close();
+  for (const subscriptions of kernelSubscriptions.values()) {
+    for (const subscription of subscriptions) subscription.dispose();
+  }
   coordinators.clear();
+  kernelSubscriptions.clear();
+  watchedKernels.clear();
   sessions.clear();
 }
 
@@ -205,7 +252,7 @@ async function handleMessage(event: {
     return;
   }
   try {
-    const current = collectionFromMetadata(cell.metadata);
+    const current = collectionFromCellMetadata(cell.metadata);
     if (request.operation === 'load') {
       queueDelivery(notebook, response(request, 'load_result', { collection: current }));
       return;
@@ -226,7 +273,7 @@ async function handleMessage(event: {
     }
     const edit = new vscode.WorkspaceEdit();
     edit.set(notebook.uri, [vscode.NotebookEdit.updateCellMetadata(
-      cell.index, metadataWithCollection(cell.metadata, next as Collection)
+      cell.index, cellMetadataWithCollection(cell.metadata, next as Collection)
     )]);
     const applied = await vscode.workspace.applyEdit(edit);
     queueDelivery(notebook, response(request, applied ? 'save_result' : 'error',
@@ -238,11 +285,36 @@ async function handleMessage(event: {
   }
 }
 
+async function handleWidgetState(
+  channel: vscode.NotebookRendererMessaging,
+  event: { editor: vscode.NotebookEditor; message: unknown }
+): Promise<void> {
+  if (!isWidgetStateRequest(event.message)) return;
+  const request = event.message;
+  const notebook = event.editor.notebook;
+  const match = managedWidgetCell(notebook.getCells(), request.modelId);
+  const live = !!match && sessions.has(keyFor(notebook, match.cellId));
+  await channel.postMessage({
+    kind: 'widget_state_result',
+    requestId: request.requestId,
+    managed: match?.managed ?? false,
+    live
+  }, event.editor);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const channel = vscode.notebooks.createRendererMessaging('redshift-notebooks-bridge');
   context.subscriptions.push(channel.onDidReceiveMessage(event => {
     void saveExport(channel, event).then(handled => handled ? undefined : handleMessage(event)).catch(error => {
       console.error('Redshift Notebooks bridge request failed.', error);
+    });
+  }));
+  const widgetChannel = vscode.notebooks.createRendererMessaging(
+    'redshift-notebooks-widget-fallback'
+  );
+  context.subscriptions.push(widgetChannel.onDidReceiveMessage(event => {
+    void handleWidgetState(widgetChannel, event).catch(error => {
+      console.error('Redshift Notebooks widget classification failed.', error);
     });
   }));
   context.subscriptions.push(vscode.workspace.onDidCloseNotebookDocument(closeNotebook));

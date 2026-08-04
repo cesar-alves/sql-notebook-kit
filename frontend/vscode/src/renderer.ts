@@ -7,6 +7,16 @@ type ThemeKind = 'light' | 'dark' | 'high_contrast';
 const BRIDGE_MIME = 'application/vnd.redshift-notebooks.bridge+json';
 const ERROR_MIME = 'application/vnd.code.notebook.error';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isLiveDisplay(output: OutputItem): boolean {
+  if (!isRecord(output.metadata)) return false;
+  const transient = output.metadata.transient;
+  return isRecord(transient) && typeof transient.display_id === 'string';
+}
+
 interface PlotlyElement extends HTMLElement {
   _fullLayout?: { width?: number; height?: number };
 }
@@ -243,6 +253,7 @@ export const activate = ((context: RendererContext<unknown>): RendererApi => {
       }
       if (output.mime !== BRIDGE_MIME) return;
       element.hidden = true;
+      if (!isLiveDisplay(output)) return;
       const request = output.json() as BridgeMessage;
       context.postMessage?.(request);
       if (request.operation !== 'capabilities') return;

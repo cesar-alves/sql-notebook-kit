@@ -7,6 +7,8 @@
   diagnostics behind the concise Redshift message.
 - Complete dark/high-contrast styling for current ipywidgets controls and add
   toolbar PNG export through JupyterLab and VS Code save surfaces.
+- Restore VS Code visualization metadata after rerunning saved SQL cells and
+  replace stale saved widget-model errors with a clear rerun placeholder.
 
 - Bundle the hardened VS Code companion in the Python wheel and add
   `redshift-notebooks vscode install/status/path` commands.
