@@ -1,9 +1,9 @@
-# redshift-notebooks
+# sql-notebook-kit
 
-`redshift-notebooks` brings SQL-cell interaction and bounded, editable charts
-to Redshift-backed Jupyter and VS Code notebooks. It adapts any synchronous
-factory that returns a DBAPI connection to SQLAlchemy and JupySQL, including
-factories that perform browser SSO before opening a connection.
+`sql-notebook-kit` brings portable SQL cells, bounded local results, lazy
+warehouse transformations, and editable charts to JupyterLab and VS Code.
+Built-in adapters cover DuckDB, Amazon Redshift, Databricks SQL, and BigQuery;
+custom synchronous DBAPI factories remain available as a best-effort escape hatch.
 
 The package never needs a password-bearing connection URL. Authentication runs
 inside the supplied factory only when a physical connection is required.
@@ -11,7 +11,7 @@ inside the supplied factory only when a physical connection is required.
 ## Install
 
 ```bash
-uv pip install -e '.[redshift,viz]'
+uv pip install -e '.[duckdb,viz]'
 ```
 
 Use the resulting environment as the notebook kernel.
@@ -30,8 +30,8 @@ Published wheels already contain the compiled VSIX. Install it into the active
 VS Code extension host with:
 
 ```bash
-redshift-notebooks vscode install
-redshift-notebooks vscode status
+sql-notebook-kit vscode install
+sql-notebook-kit vscode status
 ```
 
 The installer detects `code`, `code-insiders`, and `codium`; use `--editor` or
@@ -39,18 +39,37 @@ The installer detects `code`, `code-insiders`, and `codium`; use `--editor` or
 WSL, or dev-container terminal for remote windows. Browser-only `vscode.dev` is
 not supported, and the Microsoft Jupyter extension is required.
 
-## Existing SSO factory
+## DuckDB quickstart
 
 ```python
-from redshift_notebooks import create_session
+from sql_notebook_kit import create_session
+
+session = create_session(
+    backend="duckdb",
+    connection_kwargs={"database": "analytics.duckdb"},
+)
+session.register(visualization=True)
+```
+
+DuckDB is the credential-free certified backend and exercises eager SQL,
+SQLFrame transformations, bounded collection, and visualization on every pull
+request. Calling `session.sql("select ...")` or using the automatic `_df`
+handle remains lazy until an action is requested.
+
+## Redshift and custom factories
+
+```python
+from sql_notebook_kit import create_session
 from <company-package>.<connection-module> import <sso-factory>
 
 session = create_session(
-    factory=<sso-factory>,
-    dialect="redshift+redshift_connector",
-    factory_kwargs={
-        "db_user": "<user-email>",
-        "preferred_role": "arn:aws:iam::<aws-account-id>:role/<role-name>",
+    backend="redshift",
+    connection_kwargs={
+        "factory": <sso-factory>,
+        "factory_kwargs": {
+            "db_user": "<user-email>",
+            "preferred_role": "arn:aws:iam::<aws-account-id>:role/<role-name>",
+        },
     },
 )
 session.register(login=True, visualization=True)
@@ -81,8 +100,8 @@ release series.
 
 ## Lazy SQL-to-Python transformations
 
-Configure a separately owned SQLFrame session to expose each eligible SQL
-result as `_df`:
+Built-in adapters automatically configure a separately owned SQLFrame session.
+Custom engines can provide their own transform-session factory:
 
 ```python
 session = create_session(
@@ -103,22 +122,20 @@ lifecycle, cost, and DuckDB setup details.
 
 ## Named profile
 
-Set `REDSHIFT_NOTEBOOKS_CONFIG` to a TOML file containing:
+Set `SQL_NOTEBOOK_KIT_CONFIG` to a TOML file containing:
 
 ```toml
 [profiles.analytics]
-factory = "<company-package>.<connection-module>:<sso-factory>"
-dialect = "redshift+redshift_connector"
+backend = "duckdb"
 
-[profiles.analytics.factory_kwargs]
-db_user = "<user-email>"
-preferred_role = "arn:aws:iam::<aws-account-id>:role/<role-name>"
+[profiles.analytics.connection_kwargs]
+database = "analytics.duckdb"
 ```
 
 Then register it:
 
 ```python
-from redshift_notebooks import create_session
+from sql_notebook_kit import create_session
 
 session = create_session(profile="analytics")
 session.register(login=True)
@@ -136,26 +153,21 @@ session.reconnect()   # release JupySQL, discard the connection, authenticate ag
 session.dispose()     # close JupySQL and pooled resources
 ```
 
-Failed SQL statements are never automatically replayed. This avoids repeating
-writes after an ambiguous network failure. When a managed SQL cell reaches
-the database and fails, its active transaction is rolled back so later cells
-can continue. The concise Redshift message is shown first, with the SQL and a
-sanitized traceback under **Technical details**. This also ends any explicit
-transaction opened across cells.
+Failed SQL statements are never automatically replayed. Capability-aware
+adapters roll back only when their backend supports meaningful recovery. A
+concise sanitized database message is shown first, with SQL and technical
+details collapsed below it.
 
-## Compatibility APIs
-
-The original `make_engine`, `register`, and
-`redshift_notebooks.adapters.config.get_configured_engine` APIs remain
-available. New code should prefer `create_session`, which owns the complete
-authentication and notebook lifecycle.
+See the [backend guide](docs/backends.md), [compatibility matrix](docs/compatibility.md),
+and [migration guide](docs/migration.md) for backend-specific configuration,
+support levels, and the intentional clean break from the old package identity.
 
 ## Development
 
 ```bash
 uv run pytest
 uv run ruff check .
-uv run mypy redshift_notebooks
+uv run mypy sql_notebook_kit
 uv run --group docs mkdocs build --strict
 pnpm check && pnpm test
 pnpm build && pnpm package:vscode

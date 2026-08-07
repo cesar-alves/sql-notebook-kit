@@ -1,10 +1,13 @@
-site_name: redshift-notebooks
-site_description: Factory-backed SQL cells and bounded visualization for Redshift notebooks
-repo_url: https://github.com/cesar-alves/redshift-notebooks
+site_name: sql-notebook-kit
+site_description: Portable SQL cells, transformations, and bounded visualization
+repo_url: https://github.com/cesar-alves/sql-notebook-kit
 strict: true
 nav:
   - Home: index.md
   - Factory contract: factory-contract.md
+  - Backends: backends.md
+  - Compatibility: compatibility.md
+  - Migration: migration.md
   - SSO guide: sso.md
   - Lazy transformations: transformations.md
   - Visualization: visualization.md

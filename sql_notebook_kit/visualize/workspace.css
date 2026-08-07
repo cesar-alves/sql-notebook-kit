@@ -1,0 +1,202 @@
+.snk-viz-workspace {
+  --snk-bg: #fff; --snk-surface: #fff; --snk-surface-muted: #f6f8fa;
+  --snk-surface-raised: #fff; --snk-text: #1f2328; --snk-text-muted: #57606a;
+  --snk-border: #d0d7de; --snk-accent: #0969da; --snk-accent-hover: #0550ae;
+  --snk-focus: #0550ae; --snk-danger: #cf222e; --snk-warning-bg: #fff8c5;
+  --snk-warning-text: #4d2d00; --snk-selection-bg: #ddf4ff; --snk-input-bg: #f6f8fa;
+  color: var(--snk-text); background: var(--snk-bg); font: inherit;
+  border: 0; border-radius: 0; padding: 8px;
+  box-sizing: border-box;
+  --jp-widgets-color: var(--snk-text);
+  --jp-widgets-input-color: var(--snk-text);
+  --jp-widgets-input-background-color: var(--snk-input-bg);
+  --jp-widgets-input-border-color: var(--snk-border);
+  --jp-widgets-input-focus-border-color: var(--snk-focus);
+  --jp-layout-color1: var(--snk-surface);
+  --jp-layout-color2: var(--snk-surface-muted);
+  --jp-ui-font-color0: var(--snk-text);
+  --jp-ui-font-color1: var(--snk-text);
+  --jp-ui-font-color2: var(--snk-text-muted);
+  --jp-border-color1: var(--snk-border);
+}
+.snk-viz-workspace * { box-sizing: border-box; }
+.snk-viz-workspace button, .snk-viz-workspace input, .snk-viz-workspace select {
+  color: var(--snk-text) !important; background: var(--snk-input-bg) !important;
+  border-color: var(--snk-border) !important;
+}
+.snk-viz-workspace select,
+.snk-viz-workspace select option { color-scheme: light; }
+.snk-viz-workspace select option {
+  color: var(--snk-text); background: var(--snk-surface-raised);
+}
+.snk-viz-workspace :focus-visible {
+  outline: 2px solid var(--snk-focus) !important; outline-offset: 2px !important;
+}
+.snk-viz-workspace .snk-workspace-toolbar {
+  align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.snk-viz-workspace .snk-tab-strip, .snk-viz-workspace .snk-context-actions {
+  align-items: center; gap: 0;
+}
+.snk-viz-workspace .snk-tab-strip .widget-toggle-buttons { margin: 0; }
+.snk-viz-workspace .snk-tab-strip button { border-radius: 0 !important; }
+.snk-viz-workspace .snk-tab-strip button:first-child { border-radius: 4px 0 0 4px !important; }
+.snk-viz-workspace .snk-tab-strip button.snk-add-tab {
+  border-left: 0 !important; border-radius: 0 4px 4px 0 !important;
+  font-size: 1rem; font-weight: 600; min-width: 2rem; padding-inline: 8px;
+}
+.snk-viz-workspace .snk-tabs button.mod-active,
+.snk-viz-workspace .snk-tabs button[aria-pressed="true"] {
+  color: var(--snk-text) !important; background: var(--snk-selection-bg) !important;
+  border-color: var(--snk-accent) !important;
+}
+.snk-viz-workspace .snk-context-actions { gap: 4px; }
+.snk-viz-workspace .snk-export-status:empty,
+.snk-viz-workspace .snk-copy-status:empty { display: none; }
+.snk-viz-workspace .snk-export-status,
+.snk-viz-workspace .snk-copy-status {
+  color: var(--snk-text-muted); min-height: 1.25rem; padding-top: 2px;
+}
+.snk-viz-workspace button.snk-context-action {
+  font-size: 0.85rem; min-width: auto; padding: 2px 7px;
+}
+.snk-viz-workspace button.snk-context-danger { color: var(--snk-danger) !important; }
+.snk-viz-workspace .snk-warning {
+  background: var(--snk-warning-bg); color: var(--snk-warning-text);
+  border: 1px solid var(--snk-border); padding: 8px;
+}
+.snk-viz-workspace .snk-row-notice {
+  color: var(--snk-text-muted); background: transparent; border: 0; padding: 6px 0 0;
+  font-size: 0.875rem;
+}
+.snk-viz-workspace .snk-lazy-notice,
+.snk-lazy-notice {
+  color: var(--snk-text-muted, #57606a); background: transparent; border: 0;
+  padding: 2px 0 0; font-size: 0.8rem;
+}
+.snk-viz-workspace .snk-error { color: var(--snk-danger); }
+.snk-viz-workspace .snk-table-wrap { max-height: 480px; overflow: auto; }
+.snk-viz-workspace table {
+  border-collapse: collapse; table-layout: auto; width: max-content; min-width: 100%;
+  color: var(--snk-text); background: var(--snk-surface);
+}
+.snk-viz-workspace th {
+  position: sticky; top: 0; background: var(--snk-surface-muted); font-weight: 600;
+  border-bottom: 2px solid var(--snk-border);
+}
+.snk-viz-workspace th, .snk-viz-workspace td {
+  border: 1px solid var(--snk-border); padding: 4px 8px; white-space: nowrap;
+  user-select: none;
+}
+.snk-viz-workspace tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--snk-surface-muted) 60%, var(--snk-surface));
+}
+.snk-viz-workspace tbody tr:hover { background: var(--snk-selection-bg); }
+.snk-viz-workspace .snk-copy-table [data-snk-selected="true"] {
+  background: var(--snk-selection-bg); box-shadow: inset 0 0 0 1px var(--snk-accent);
+}
+.snk-viz-workspace .snk-copy-table [data-snk-active="true"] {
+  box-shadow: inset 0 0 0 2px var(--snk-focus);
+}
+.snk-viz-workspace .widget-label {
+  white-space: normal !important; min-width: 8rem !important; width: auto !important;
+}
+.snk-viz-workspace .snk-name-control input {
+  color: var(--snk-text) !important; background: var(--snk-input-bg) !important;
+  border: 1px solid var(--snk-border) !important; caret-color: var(--snk-text);
+}
+.snk-viz-workspace .snk-name-control input::placeholder { color: var(--snk-text-muted); }
+.snk-viz-workspace .snk-name-control input:hover { border-color: var(--snk-accent) !important; }
+.snk-viz-workspace .snk-name-control input:focus {
+  border-color: var(--snk-focus) !important; box-shadow: 0 0 0 1px var(--snk-focus) !important;
+}
+.snk-viz-workspace .snk-name-control input:disabled {
+  color: var(--snk-text-muted) !important; background: var(--snk-surface-muted) !important;
+}
+.snk-viz-workspace .snk-options-section,
+.snk-viz-workspace .snk-options-section > .p-AccordionPanel,
+.snk-viz-workspace .snk-options-section > .lm-AccordionPanel {
+  color: var(--snk-text) !important; background: var(--snk-surface) !important;
+  border-color: var(--snk-border) !important;
+}
+.snk-viz-workspace .snk-options-section .jupyter-widget-Collapse,
+.snk-viz-workspace .snk-options-section .jupyter-widget-Collapse-contents {
+  color: var(--snk-text) !important; background: var(--snk-surface) !important;
+  border-color: var(--snk-border) !important;
+}
+.snk-viz-workspace .snk-options-section .jupyter-widget-Collapse-header {
+  color: var(--snk-text) !important; background: var(--snk-surface-muted) !important;
+  border-color: var(--snk-border) !important;
+}
+.snk-viz-workspace .snk-options-section .jupyter-widget-Collapse-header:hover,
+.snk-viz-workspace .snk-options-section .jupyter-widget-Collapse-open > .jupyter-widget-Collapse-header {
+  color: var(--snk-text) !important; background: var(--snk-selection-bg) !important;
+}
+.snk-viz-workspace .snk-options-section .jupyter-widget-Collapse-header:focus-visible {
+  outline: 2px solid var(--snk-focus) !important; outline-offset: -2px !important;
+}
+.snk-viz-workspace .snk-options-section .p-AccordionPanel-title,
+.snk-viz-workspace .snk-options-section .lm-AccordionPanel-title {
+  color: var(--snk-text) !important; background: var(--snk-surface-muted) !important;
+  border-color: var(--snk-border) !important;
+}
+.snk-viz-workspace .snk-options-section .p-AccordionPanel-title:hover,
+.snk-viz-workspace .snk-options-section .lm-AccordionPanel-title:hover,
+.snk-viz-workspace .snk-options-section .p-mod-current,
+.snk-viz-workspace .snk-options-section .lm-mod-current {
+  color: var(--snk-text) !important; background: var(--snk-selection-bg) !important;
+}
+.snk-viz-workspace .snk-options-section .p-AccordionPanel-title:focus-visible,
+.snk-viz-workspace .snk-options-section .lm-AccordionPanel-title:focus-visible {
+  outline: 2px solid var(--snk-focus) !important; outline-offset: -2px !important;
+}
+.snk-viz-workspace .snk-options-section .p-AccordionPanel-title::before,
+.snk-viz-workspace .snk-options-section .lm-AccordionPanel-title::before {
+  color: currentColor !important;
+}
+.snk-viz-workspace .snk-options-section .p-AccordionPanel-widget,
+.snk-viz-workspace .snk-options-section .lm-AccordionPanel-widget {
+  color: var(--snk-text) !important; background: var(--snk-surface) !important;
+  border-color: var(--snk-border) !important;
+}
+.snk-editor {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); gap: 12px;
+}
+.snk-viz-workspace .snk-editor-panel,
+.snk-viz-workspace .snk-dialog-panel {
+  color: var(--snk-text); background: var(--snk-surface-raised);
+  border: 1px solid var(--snk-border); border-radius: 4px; padding: 12px;
+}
+.snk-viz-workspace .snk-dialog-panel { gap: 8px; max-width: 32rem; }
+@media (max-width: 640px) { .snk-editor { grid-template-columns: 1fr; } }
+.snk-viz-workspace.snk-theme-dark,
+.snk-viz-workspace.snk-theme-high-contrast {
+  --snk-bg: #1e1e1e; --snk-surface: #252526; --snk-surface-muted: #313131;
+  --snk-surface-raised: #2d2d30; --snk-text: #f0f0f0; --snk-text-muted: #c4c4c4;
+  --snk-border: #5a5a5a; --snk-accent: #4daafc; --snk-accent-hover: #75beff;
+  --snk-focus: #75beff; --snk-danger: #f48771; --snk-warning-bg: #3b2e00;
+  --snk-warning-text: #ffd866; --snk-selection-bg: #063b49; --snk-input-bg: #313131;
+}
+.snk-viz-workspace.snk-theme-dark select,
+.snk-viz-workspace.snk-theme-dark select option,
+.snk-viz-workspace.snk-theme-high-contrast select,
+.snk-viz-workspace.snk-theme-high-contrast select option { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  .snk-viz-workspace:not(.snk-theme-light) {
+    --snk-bg: #1e1e1e; --snk-surface: #252526; --snk-surface-muted: #313131;
+    --snk-surface-raised: #2d2d30; --snk-text: #f0f0f0; --snk-text-muted: #c4c4c4;
+    --snk-border: #5a5a5a; --snk-accent: #4daafc; --snk-accent-hover: #75beff;
+    --snk-focus: #75beff; --snk-danger: #f48771; --snk-warning-bg: #3b2e00;
+    --snk-warning-text: #ffd866; --snk-selection-bg: #063b49; --snk-input-bg: #313131;
+  }
+}
+@media (forced-colors: active) {
+  .snk-viz-workspace {
+    --snk-bg: Canvas; --snk-surface: Canvas; --snk-surface-muted: ButtonFace;
+    --snk-surface-raised: Canvas; --snk-text: CanvasText; --snk-text-muted: GrayText;
+    --snk-border: CanvasText; --snk-accent: Highlight; --snk-focus: Highlight;
+    --snk-danger: CanvasText; --snk-warning-bg: Mark; --snk-warning-text: MarkText;
+    --snk-selection-bg: Highlight; --snk-input-bg: ButtonFace; border: 1px solid CanvasText;
+  }
+  .snk-viz-workspace * { box-shadow: none !important; background-image: none !important; }
+}

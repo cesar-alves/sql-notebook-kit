@@ -31,7 +31,7 @@ function modelId(output: OutputItem): string | undefined {
 function renderPlaceholder(element: HTMLElement): void {
   element.replaceChildren();
   const root = document.createElement('div');
-  root.className = 'rn-widget-placeholder';
+  root.className = 'snk-widget-placeholder';
   root.setAttribute('role', 'status');
   root.style.cssText = [
     'border-left: 3px solid var(--vscode-notebookInfoIcon-foreground, #3794ff)',

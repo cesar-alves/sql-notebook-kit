@@ -6,7 +6,7 @@ from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
-VSIX_PATH = Path("redshift_notebooks/vscode/redshift-notebooks-vscode.vsix")
+VSIX_PATH = Path("sql_notebook_kit/vscode/sql-notebook-kit-vscode.vsix")
 
 
 def require_staged_vsix(root: Path) -> None:

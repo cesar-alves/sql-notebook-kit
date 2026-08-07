@@ -1,7 +1,7 @@
 import { hasVisualizationMetadata } from './cellMetadata.js';
 
 export const WIDGET_MIME = 'application/vnd.jupyter.widget-view+json';
-export const BRIDGE_MIME = 'application/vnd.redshift-notebooks.bridge+json';
+export const BRIDGE_MIME = 'application/vnd.sql-notebook-kit.bridge+json';
 
 interface OutputItemLike {
   mime: string;

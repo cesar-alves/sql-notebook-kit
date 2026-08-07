@@ -13,18 +13,18 @@ interface Selection {
 }
 
 const coordinate = (cell: Element): Coordinate => ({
-  row: Number(cell.getAttribute('data-rn-row')),
-  column: Number(cell.getAttribute('data-rn-column'))
+  row: Number(cell.getAttribute('data-snk-row')),
+  column: Number(cell.getAttribute('data-snk-column'))
 });
 
 function copyCell(target: EventTarget | null): HTMLElement | null {
   return target instanceof Element
-    ? target.closest<HTMLElement>('[data-rn-row][data-rn-column]')
+    ? target.closest<HTMLElement>('[data-snk-row][data-snk-column]')
     : null;
 }
 
 function tableFor(cell: Element): HTMLElement | null {
-  return cell.closest<HTMLElement>('.rn-copy-table');
+  return cell.closest<HTMLElement>('.snk-copy-table');
 }
 
 function bounds(selection: Selection) {
@@ -37,7 +37,7 @@ function bounds(selection: Selection) {
 }
 
 function cellValue(cell: Element): string {
-  return cell.hasAttribute('data-rn-null') ? '' : cell.textContent ?? '';
+  return cell.hasAttribute('data-snk-null') ? '' : cell.textContent ?? '';
 }
 
 function matrix(
@@ -45,7 +45,7 @@ function matrix(
   selected?: Selection
 ): string[][] {
   const cells = Array.from(
-    table.querySelectorAll<HTMLElement>('[data-rn-row][data-rn-column]')
+    table.querySelectorAll<HTMLElement>('[data-snk-row][data-snk-column]')
   );
   if (!cells.length) return [];
   const range = selected ?? {
@@ -80,10 +80,10 @@ export function toTsv(rows: string[][]): string {
 }
 
 function status(root: Element, message: string, error = false): void {
-  const target = root.querySelector<HTMLElement>('.rn-copy-status');
+  const target = root.querySelector<HTMLElement>('.snk-copy-status');
   if (!target) return;
   target.textContent = message;
-  target.classList.toggle('rn-error', error);
+  target.classList.toggle('snk-error', error);
 }
 
 function announce(root: Element, rows: string[][]): void {
@@ -95,16 +95,16 @@ function announce(root: Element, rows: string[][]): void {
 
 function renderSelection(table: HTMLElement, selection: Selection): void {
   const range = bounds(selection);
-  for (const cell of table.querySelectorAll<HTMLElement>('[data-rn-row][data-rn-column]')) {
+  for (const cell of table.querySelectorAll<HTMLElement>('[data-snk-row][data-snk-column]')) {
     const point = coordinate(cell);
     const selected = point.row >= range.firstRow && point.row <= range.lastRow &&
       point.column >= range.firstColumn && point.column <= range.lastColumn;
     const active = point.row === selection.focus.row && point.column === selection.focus.column;
-    if (selected) cell.setAttribute('data-rn-selected', 'true');
-    else cell.removeAttribute('data-rn-selected');
+    if (selected) cell.setAttribute('data-snk-selected', 'true');
+    else cell.removeAttribute('data-snk-selected');
     cell.setAttribute('aria-selected', String(selected));
-    if (active) cell.setAttribute('data-rn-active', 'true');
-    else cell.removeAttribute('data-rn-active');
+    if (active) cell.setAttribute('data-snk-active', 'true');
+    else cell.removeAttribute('data-snk-active');
     cell.tabIndex = active ? 0 : -1;
     if (active) cell.focus({ preventScroll: true });
   }
@@ -112,7 +112,7 @@ function renderSelection(table: HTMLElement, selection: Selection): void {
 
 function move(table: HTMLElement, current: Coordinate, key: string): Coordinate {
   const cells = Array.from(
-    table.querySelectorAll<HTMLElement>('[data-rn-row][data-rn-column]')
+    table.querySelectorAll<HTMLElement>('[data-snk-row][data-snk-column]')
   ).map(coordinate);
   const maxRow = Math.max(...cells.map(item => item.row));
   const maxColumn = Math.max(...cells.map(item => item.column));
@@ -171,11 +171,11 @@ export function installTableCopy(options: TableCopyOptions): () => void {
     renderSelection(table, selection);
   };
   const copy = (event: ClipboardEvent) => {
-    const eventTable = copyCell(event.target)?.closest<HTMLElement>('.rn-copy-table');
-    const activeTable = document.activeElement?.closest<HTMLElement>('.rn-copy-table');
+    const eventTable = copyCell(event.target)?.closest<HTMLElement>('.snk-copy-table');
+    const activeTable = document.activeElement?.closest<HTMLElement>('.snk-copy-table');
     const table = eventTable ?? activeTable ?? null;
     const selection = table ? selections.get(table) : undefined;
-    const root = table?.closest('.rn-viz-workspace');
+    const root = table?.closest('.snk-viz-workspace');
     if (!table || !selection || !root || !event.clipboardData) return;
     const rows = matrix(table, selection);
     event.preventDefault();
@@ -184,13 +184,13 @@ export function installTableCopy(options: TableCopyOptions): () => void {
   };
   const click = async (event: Event) => {
     const target = event.target instanceof Element ? event.target : null;
-    const button = target?.closest('.rn-copy-button');
-    const root = button?.closest('.rn-viz-workspace');
+    const button = target?.closest('.snk-copy-button');
+    const root = button?.closest('.snk-viz-workspace');
     if (!button || !root) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    const payload = root.querySelector<HTMLTextAreaElement>('.rn-copy-payload');
-    const table = root.querySelector<HTMLElement>('.rn-copy-table');
+    const payload = root.querySelector<HTMLTextAreaElement>('.snk-copy-payload');
+    const table = root.querySelector<HTMLElement>('.snk-copy-table');
     const rows = table ? matrix(table) : [];
     const value = payload?.value ?? toTsv(rows);
     status(root, 'Copying TSV…');

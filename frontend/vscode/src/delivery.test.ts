@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { BridgeMessage, Operation } from '@redshift-notebooks/protocol';
+import type { BridgeMessage, Operation } from '@sql-notebook-kit/protocol';
 import {
   DeliveryCoordinator,
   executeWithTimeout,

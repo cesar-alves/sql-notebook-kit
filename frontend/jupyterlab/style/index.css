@@ -1,28 +1,28 @@
-.rn-viz-workspace {
-  --rn-bg: var(--jp-layout-color0, #fff);
-  --rn-surface: var(--jp-layout-color1, #fff);
-  --rn-surface-muted: var(--jp-layout-color2, #f6f8fa);
-  --rn-surface-raised: var(--jp-layout-color1, #fff);
-  --rn-text: var(--jp-ui-font-color1, #1f2328);
-  --rn-text-muted: var(--jp-ui-font-color2, #57606a);
-  --rn-border: var(--jp-border-color1, #d0d7de);
-  --rn-accent: var(--jp-brand-color1, #0969da);
-  --rn-accent-hover: var(--jp-brand-color2, #0550ae);
-  --rn-focus: var(--jp-brand-color1, #0550ae);
-  --rn-danger: var(--jp-error-color1, #cf222e);
+.snk-viz-workspace {
+  --snk-bg: var(--jp-layout-color0, #fff);
+  --snk-surface: var(--jp-layout-color1, #fff);
+  --snk-surface-muted: var(--jp-layout-color2, #f6f8fa);
+  --snk-surface-raised: var(--jp-layout-color1, #fff);
+  --snk-text: var(--jp-ui-font-color1, #1f2328);
+  --snk-text-muted: var(--jp-ui-font-color2, #57606a);
+  --snk-border: var(--jp-border-color1, #d0d7de);
+  --snk-accent: var(--jp-brand-color1, #0969da);
+  --snk-accent-hover: var(--jp-brand-color2, #0550ae);
+  --snk-focus: var(--jp-brand-color1, #0550ae);
+  --snk-danger: var(--jp-error-color1, #cf222e);
 }
 
-.rn-sql-error {
+.snk-sql-error {
   color: var(--jp-ui-font-color1, #1f2328);
   background: var(--jp-layout-color1, #fff);
   border-left: 3px solid var(--jp-error-color1, #cf222e);
   padding: 8px 12px;
 }
 
-.rn-sql-error-summary { color: var(--jp-error-color1, #cf222e); font-weight: 600; }
-.rn-sql-error details { margin-top: 6px; }
-.rn-sql-error summary { cursor: pointer; color: var(--jp-ui-font-color1, #1f2328); }
-.rn-sql-error pre {
+.snk-sql-error-summary { color: var(--jp-error-color1, #cf222e); font-weight: 600; }
+.snk-sql-error details { margin-top: 6px; }
+.snk-sql-error summary { cursor: pointer; color: var(--jp-ui-font-color1, #1f2328); }
+.snk-sql-error pre {
   color: var(--jp-ui-font-color1, #1f2328);
   background: var(--jp-layout-color2, #f6f8fa);
   border: 1px solid var(--jp-border-color1, #d0d7de);

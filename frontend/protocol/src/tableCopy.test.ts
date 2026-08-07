@@ -14,21 +14,21 @@ function install(writeText: (value: string) => Promise<void>): () => void {
 
 function workspace(): HTMLElement {
   const root = document.createElement('div');
-  root.className = 'rn-viz-workspace';
+  root.className = 'snk-viz-workspace';
   root.innerHTML = `
-    <button class="rn-copy-button">Copy table</button>
-    <div class="rn-copy-status"></div>
-    <div class="rn-copy-table" tabindex="0">
+    <button class="snk-copy-button">Copy table</button>
+    <div class="snk-copy-status"></div>
+    <div class="snk-copy-table" tabindex="0">
       <table>
         <thead><tr>
-          <th tabindex="-1" data-rn-row="0" data-rn-column="0">First</th>
-          <th tabindex="-1" data-rn-row="0" data-rn-column="1">Second</th>
+          <th tabindex="-1" data-snk-row="0" data-snk-column="0">First</th>
+          <th tabindex="-1" data-snk-row="0" data-snk-column="1">Second</th>
         </tr></thead>
         <tbody>
-          <tr><td tabindex="-1" data-rn-row="1" data-rn-column="0">a</td>
-              <td tabindex="-1" data-rn-row="1" data-rn-column="1">b</td></tr>
-          <tr><td tabindex="-1" data-rn-row="2" data-rn-column="0" data-rn-null="true">—</td>
-              <td tabindex="-1" data-rn-row="2" data-rn-column="1">d</td></tr>
+          <tr><td tabindex="-1" data-snk-row="1" data-snk-column="0">a</td>
+              <td tabindex="-1" data-snk-row="1" data-snk-column="1">b</td></tr>
+          <tr><td tabindex="-1" data-snk-row="2" data-snk-column="0" data-snk-null="true">—</td>
+              <td tabindex="-1" data-snk-row="2" data-snk-column="1">d</td></tr>
         </tbody>
       </table>
     </div>`;
@@ -65,8 +65,8 @@ describe('table copy controller', () => {
   it('copies a dragged rectangle without adding unselected headers', () => {
     const root = workspace();
     const dispose = install(vi.fn());
-    const start = root.querySelector('[data-rn-row="1"][data-rn-column="0"]') as HTMLElement;
-    const end = root.querySelector('[data-rn-row="2"][data-rn-column="1"]') as HTMLElement;
+    const start = root.querySelector('[data-snk-row="1"][data-snk-column="0"]') as HTMLElement;
+    const end = root.querySelector('[data-snk-row="2"][data-snk-column="1"]') as HTMLElement;
 
     pointer(start, 'pointerdown');
     pointer(end, 'pointerover');
@@ -74,21 +74,21 @@ describe('table copy controller', () => {
     const result = copy(end);
 
     expect(result).toEqual({ prevented: true, text: 'a\tb\n\td' });
-    expect(root.querySelectorAll('[data-rn-selected="true"]')).toHaveLength(4);
-    expect(root.querySelector('.rn-copy-status')?.textContent).toBe('Copied 2 rows × 2 columns.');
+    expect(root.querySelectorAll('[data-snk-selected="true"]')).toHaveLength(4);
+    expect(root.querySelector('.snk-copy-status')?.textContent).toBe('Copied 2 rows × 2 columns.');
     dispose();
   });
 
   it('expands a header selection with Shift+Arrow and includes selected headers', () => {
     const root = workspace();
     const dispose = install(vi.fn());
-    const header = root.querySelector('[data-rn-row="0"][data-rn-column="0"]') as HTMLElement;
+    const header = root.querySelector('[data-snk-row="0"][data-snk-column="0"]') as HTMLElement;
     pointer(header, 'pointerdown');
     header.dispatchEvent(new KeyboardEvent('keydown', {
       bubbles: true, key: 'ArrowRight', shiftKey: true
     }));
 
-    const active = root.querySelector('[data-rn-active="true"]') as HTMLElement;
+    const active = root.querySelector('[data-snk-active="true"]') as HTMLElement;
     expect(copy(active).text).toBe('First\tSecond');
     expect(active.textContent).toBe('Second');
     dispose();
@@ -98,37 +98,37 @@ describe('table copy controller', () => {
     const root = workspace();
     const writeText = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error());
     const dispose = install(writeText);
-    const button = root.querySelector('.rn-copy-button') as HTMLButtonElement;
+    const button = root.querySelector('.snk-copy-button') as HTMLButtonElement;
 
     button.click();
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith('First\tSecond\na\tb\n\td');
-    expect(root.querySelector('.rn-copy-status')?.textContent).toBe('Copied 3 rows × 2 columns.');
+    expect(root.querySelector('.snk-copy-status')?.textContent).toBe('Copied 3 rows × 2 columns.');
 
     button.click();
     await Promise.resolve();
     await Promise.resolve();
-    expect(root.querySelector('.rn-copy-status')?.textContent)
+    expect(root.querySelector('.snk-copy-status')?.textContent)
       .toBe('Copy failed. Check clipboard permissions and try again.');
-    expect(root.querySelector('.rn-copy-status')?.classList.contains('rn-error')).toBe(true);
+    expect(root.querySelector('.snk-copy-status')?.classList.contains('snk-error')).toBe(true);
     dispose();
   });
 
   it('prefers a prepared visualization payload over a table', async () => {
     const root = workspace();
     const payload = document.createElement('textarea');
-    payload.className = 'rn-copy-payload';
+    payload.className = 'snk-copy-payload';
     payload.value = 'Period\tRevenue\n2026-01\t3';
-    root.querySelector('.rn-copy-table')?.remove();
+    root.querySelector('.snk-copy-table')?.remove();
     root.appendChild(payload);
     const writeText = vi.fn().mockResolvedValue(undefined);
     const dispose = install(writeText);
 
-    (root.querySelector('.rn-copy-button') as HTMLButtonElement).click();
+    (root.querySelector('.snk-copy-button') as HTMLButtonElement).click();
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith('Period\tRevenue\n2026-01\t3');
-    expect(root.querySelector('.rn-copy-status')?.textContent).toBe('Copied visualization data.');
+    expect(root.querySelector('.snk-copy-status')?.textContent).toBe('Copied visualization data.');
     dispose();
   });
 });

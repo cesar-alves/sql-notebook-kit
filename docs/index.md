@@ -1,26 +1,23 @@
-# redshift-notebooks
+# sql-notebook-kit
 
-`redshift-notebooks` turns a synchronous DBAPI connection factory into a
-managed SQLAlchemy/JupySQL notebook session. The factory may perform browser
-SSO, acquire temporary credentials, or use any other authentication flow.
+`sql-notebook-kit` provides portable SQL cells, bounded results, lazy SQLFrame
+transformations, and editable visualizations across JupyterLab and VS Code.
+Use a built-in backend or provide a synchronous DBAPI factory.
 
 ## Minimal setup
 
 ```python
-from redshift_notebooks import create_session
-from <company-package>.<connection-module> import <sso-factory>
-
+from sql_notebook_kit import create_session
 session = create_session(
-    factory=<sso-factory>,
-    dialect="redshift+redshift_connector",
-    factory_kwargs={"db_user": "<user-email>"},
+    backend="duckdb",
+    connection_kwargs={"database": "analytics.duckdb"},
 )
-session.register(login=True)
+session.register()
 ```
 
-The factory is not invoked during import or session construction. With
-`login=True`, it is invoked immediately before notebook registration. With
-`login=False`, it is invoked when JupySQL first checks out a connection.
+No physical connection opens during import or session construction. Built-in
+Redshift, DuckDB, Databricks, and BigQuery adapters share the same eager and
+lazy notebook contracts, with capability differences recorded explicitly.
 
-Read the [factory contract](factory-contract.md) before integrating a custom
-SSO implementation.
+Read the [backend guide](backends.md), [compatibility matrix](compatibility.md),
+and [factory contract](factory-contract.md) for integration details.

@@ -30,8 +30,8 @@ The optional reference factory maps documented inputs to
 `BrowserAzureCredentialsProvider`:
 
 ```python
-from redshift_notebooks import create_session
-from redshift_notebooks.adapters import browser_azure_sso
+from sql_notebook_kit import create_session
+from sql_notebook_kit.adapters import browser_azure_sso
 
 session = create_session(
     factory=browser_azure_sso,
@@ -52,8 +52,8 @@ session.register(login=True)
 ## AWS IAM Identity Center
 
 ```python
-from redshift_notebooks import create_session
-from redshift_notebooks.adapters import identity_center_sso
+from sql_notebook_kit import create_session
+from sql_notebook_kit.adapters import identity_center_sso
 
 session = create_session(
     factory=identity_center_sso,
@@ -83,7 +83,7 @@ dialect = "redshift+redshift_connector"
 secret_fields = ["token"]
 ```
 
-Set `REDSHIFT_NOTEBOOKS_SECRET_TOKEN` in the kernel environment. Alternatively,
+Set `SQL_NOTEBOOK_KIT_SECRET_TOKEN` in the kernel environment. Alternatively,
 pass `secret_resolver=` to `create_session`. The resolver receives the field
 name and returns its value; the package never prints that value.
 

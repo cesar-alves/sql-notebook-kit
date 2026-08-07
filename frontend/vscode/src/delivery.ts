@@ -1,4 +1,4 @@
-import type { BridgeMessage } from '@redshift-notebooks/protocol';
+import type { BridgeMessage } from '@sql-notebook-kit/protocol';
 
 export interface DeliveryKernel {
   readonly status: string;

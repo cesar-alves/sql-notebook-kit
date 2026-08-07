@@ -1,23 +1,24 @@
 # Lazy SQL-to-Python transformations
 
-An eligible managed SQL result is also exposed as `_df` when the session has a
-`transform_session_factory`. `_df` is a `LazyQuery`, not the bounded pandas
+An eligible managed SQL result is also exposed as `_df` when the selected
+backend supports transformations. `_df` is a `LazyQuery`, not the bounded pandas
 DataFrame shown in the output and not SQLFrame's native DataFrame.
 
 ```python
-from redshift_notebooks import create_session
+from sql_notebook_kit import create_session
 
 session = create_session(
-    factory=<eager-dbapi-factory>,
-    dialect="<sqlalchemy-dialect>",
-    transform_session_factory=<sqlframe-session-factory>,
+    backend="duckdb",
+    connection_kwargs={"database": "analytics.duckdb"},
 )
 session.register()
 ```
 
-The transform factory must synchronously return a new SQLFrame-compatible
-session with `sql()` and `stop()` methods. It is not called during session
-construction, registration, or SQL-cell execution. The first access to
+Built-in adapters create their SQLFrame session through a separate physical
+connection. Custom factories may provide a `transform_session_factory` that
+returns a SQLFrame-compatible session with `sql()` and `stop()` methods. The
+transform connection is not created during session construction, registration,
+or SQL-cell execution. The first access to
 `_df.native`, `apply()`, `compile()`, `collect()`, or `visualize()` creates the
 separate transform connection.
 
@@ -78,22 +79,15 @@ a second live owner before invoking its factory.
 
 ## DuckDB reference setup
 
-Install `redshift-notebooks[duckdb]` and use a file-backed database so the two
+Install `sql-notebook-kit[duckdb]` and use a file-backed database so the two
 connections can see the same persistent catalog:
 
 ```python
-import duckdb
-from duckdb_engine import ConnectionWrapper
-from sqlframe.duckdb import DuckDBSession
-
 database = "analytics.duckdb"
 
 session = create_session(
-    factory=lambda: ConnectionWrapper(duckdb.connect(database)),
-    dialect="duckdb",
-    transform_session_factory=lambda: DuckDBSession(
-        conn=duckdb.connect(database)
-    ),
+    backend="duckdb",
+    connection_kwargs={"database": database},
 )
 ```
 

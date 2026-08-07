@@ -1,17 +1,20 @@
 import {
+  LEGACY_METADATA_NAMESPACE,
   METADATA_NAMESPACE,
   collectionFromMetadata,
   metadataWithCollection,
   type Collection
-} from '@redshift-notebooks/protocol';
+} from '@sql-notebook-kit/protocol';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 function hasCollection(metadata: Record<string, unknown>): boolean {
-  const namespace = metadata[METADATA_NAMESPACE];
-  return isRecord(namespace) && Object.hasOwn(namespace, 'visualizations');
+  const current = metadata[METADATA_NAMESPACE];
+  const legacy = metadata[LEGACY_METADATA_NAMESPACE];
+  return (isRecord(current) && Object.hasOwn(current, 'visualizations')) ||
+    (isRecord(legacy) && Object.hasOwn(legacy, 'visualizations'));
 }
 
 export function jupyterCellMetadata(
@@ -39,12 +42,12 @@ export function cellMetadataWithCollection(
 ): Record<string, unknown> {
   const nested = metadataWithCollection(jupyterCellMetadata(cellMetadata), collection);
   const result: Record<string, unknown> = { ...cellMetadata, metadata: nested };
-  const legacyNamespace = result[METADATA_NAMESPACE];
+  const legacyNamespace = result[LEGACY_METADATA_NAMESPACE];
   if (!isRecord(legacyNamespace) || !Object.hasOwn(legacyNamespace, 'visualizations')) {
     return result;
   }
   const { visualizations: _visualizations, ...remaining } = legacyNamespace;
-  if (Object.keys(remaining).length) result[METADATA_NAMESPACE] = remaining;
-  else delete result[METADATA_NAMESPACE];
+  if (Object.keys(remaining).length) result[LEGACY_METADATA_NAMESPACE] = remaining;
+  else delete result[LEGACY_METADATA_NAMESPACE];
   return result;
 }

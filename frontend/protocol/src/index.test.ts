@@ -12,9 +12,30 @@ describe('shared visualization protocol', () => {
   });
 
   it('round-trips namespaced metadata without replacing adjacent keys', () => {
-    const metadata = metadataWithCollection({ redshift_notebooks: { keep: true } }, emptyCollection());
+    const metadata = metadataWithCollection({ sql_notebook_kit: { keep: true } }, emptyCollection());
     expect(collectionFromMetadata(metadata)).toEqual(emptyCollection());
-    expect((metadata.redshift_notebooks as Record<string, unknown>).keep).toBe(true);
+    expect((metadata.sql_notebook_kit as Record<string, unknown>).keep).toBe(true);
+  });
+
+  it('reads legacy metadata and migrates only its visualization collection', () => {
+    const legacy = {
+      redshift_notebooks: { visualizations: { ...emptyCollection(), revision: 3 }, keep: true },
+      adjacent: true
+    };
+    expect(collectionFromMetadata(legacy).revision).toBe(3);
+    const migrated = metadataWithCollection(legacy, { ...emptyCollection(), revision: 4 });
+    expect(migrated).toEqual({
+      redshift_notebooks: { keep: true },
+      sql_notebook_kit: { visualizations: { ...emptyCollection(), revision: 4 } },
+      adjacent: true
+    });
+  });
+
+  it('prefers canonical metadata over a stale legacy collection', () => {
+    expect(collectionFromMetadata({
+      sql_notebook_kit: { visualizations: { ...emptyCollection(), revision: 5 } },
+      redshift_notebooks: { visualizations: { ...emptyCollection(), revision: 2 } }
+    }).revision).toBe(5);
   });
 
   it('rejects an incompatible protocol message', () => {
@@ -27,7 +48,7 @@ describe('shared visualization protocol', () => {
       operation: 'execute', payload: {}
     })).toBe(false);
     expect(() => collectionFromMetadata({
-      redshift_notebooks: { visualizations: { schema_version: 1, revision: -1, items: [] } }
+      sql_notebook_kit: { visualizations: { schema_version: 1, revision: -1, items: [] } }
     })).toThrow(/newer compatible extension/);
   });
 });

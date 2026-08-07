@@ -1,7 +1,8 @@
 export const PROTOCOL_VERSION = 1 as const;
 export { installTableCopy, toTsv, type TableCopyOptions } from './tableCopy.js';
-export const COMM_TARGET = 'redshift_notebooks.visualizations.v1';
-export const METADATA_NAMESPACE = 'redshift_notebooks';
+export const COMM_TARGET = 'sql_notebook_kit.visualizations.v1';
+export const METADATA_NAMESPACE = 'sql_notebook_kit';
+export const LEGACY_METADATA_NAMESPACE = 'redshift_notebooks';
 
 export type ThemeKind = 'light' | 'dark' | 'high_contrast';
 export type Operation =
@@ -79,7 +80,9 @@ export function isBridgeMessage(value: unknown): value is BridgeMessage {
 }
 
 export function collectionFromMetadata(metadata: Record<string, unknown>): Collection {
-  const namespace = metadata[METADATA_NAMESPACE] as Record<string, unknown> | undefined;
+  const current = metadata[METADATA_NAMESPACE] as Record<string, unknown> | undefined;
+  const legacy = metadata[LEGACY_METADATA_NAMESPACE] as Record<string, unknown> | undefined;
+  const namespace = current && Object.hasOwn(current, 'visualizations') ? current : legacy;
   const value = namespace?.visualizations;
   if (!value) return emptyCollection();
   if (!isCollection(value)) {
@@ -93,8 +96,15 @@ export function metadataWithCollection(
   collection: Collection
 ): Record<string, unknown> {
   const namespace = (metadata[METADATA_NAMESPACE] as Record<string, unknown> | undefined) ?? {};
-  return {
+  const result: Record<string, unknown> = {
     ...metadata,
     [METADATA_NAMESPACE]: { ...namespace, visualizations: collection }
   };
+  const legacy = result[LEGACY_METADATA_NAMESPACE];
+  if (isRecord(legacy) && Object.hasOwn(legacy, 'visualizations')) {
+    const { visualizations: _visualizations, ...remaining } = legacy;
+    if (Object.keys(remaining).length) result[LEGACY_METADATA_NAMESPACE] = remaining;
+    else delete result[LEGACY_METADATA_NAMESPACE];
+  }
+  return result;
 }

@@ -20,10 +20,10 @@ describe('saved widget ownership', () => {
     };
     const widget = { mime: WIDGET_MIME, value: { model_id: 'owned' } };
     expect(managedWidgetCell([cell({
-      metadata: { redshift_notebooks: { visualizations: collection } }
+      metadata: { sql_notebook_kit: { visualizations: collection } }
     }, [widget])], 'owned')?.managed).toBe(true);
     expect(managedWidgetCell([cell({
-      redshift_notebooks: { visualizations: collection }
+      sql_notebook_kit: { visualizations: collection }
     }, [widget])], 'owned')?.managed).toBe(true);
   });
 

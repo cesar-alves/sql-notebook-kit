@@ -2,13 +2,13 @@ import sqlite3
 
 import pytest
 
-from redshift_notebooks.connectors import FactorySpec, load_factory
-from redshift_notebooks.errors import (
+from sql_notebook_kit.connectors import FactorySpec, load_factory
+from sql_notebook_kit.errors import (
     ConfigurationError,
     FactoryImportError,
     NotebookConnectionError,
 )
-from redshift_notebooks.session import create_session
+from sql_notebook_kit.session import create_session
 
 
 def test_factory_spec_binds_kwargs_without_exposing_values():

@@ -44,7 +44,7 @@ importers:
       '@lumino/widgets':
         specifier: ^2.6.0
         version: 2.9.0
-      '@redshift-notebooks/protocol':
+      '@sql-notebook-kit/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -68,7 +68,7 @@ importers:
 
   frontend/vscode:
     dependencies:
-      '@redshift-notebooks/protocol':
+      '@sql-notebook-kit/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:

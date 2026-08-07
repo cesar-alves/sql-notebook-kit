@@ -1,1 +1,1 @@
-"""Development-only tools for redshift-notebooks."""
+"""Development-only tools for sql-notebook-kit."""

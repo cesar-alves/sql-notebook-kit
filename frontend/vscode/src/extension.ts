@@ -5,7 +5,7 @@ import {
   isCollection,
   type BridgeMessage,
   type Collection
-} from '@redshift-notebooks/protocol';
+} from '@sql-notebook-kit/protocol';
 import {
   cellMetadataWithCollection,
   collectionFromCellMetadata
@@ -103,7 +103,7 @@ async function saveExport(
       status = 'saved';
     }
   } catch (error) {
-    console.error('Redshift Notebooks PNG export failed.', error);
+    console.error('SQL Notebook Kit PNG export failed.', error);
   }
   await channel.postMessage({
     kind: 'export_png_result', requestId: request.requestId, status, filename: request.filename
@@ -131,7 +131,7 @@ async function copyText(
     await vscode.env.clipboard.writeText(request.text);
     status = 'copied';
   } catch (error) {
-    console.error('Redshift Notebooks text copy failed.', error);
+    console.error('SQL Notebook Kit text copy failed.', error);
   }
   await channel.postMessage({
     kind: 'copy_text_result', requestId: request.requestId, status
@@ -200,7 +200,7 @@ async function deliver(
 ): Promise<void> {
   const kernel = await waitForReadyKernel(() => deliveryKernel(notebook), signal);
   const encoded = Buffer.from(JSON.stringify(message), 'utf8').toString('base64');
-  const code = `from redshift_notebooks.visualize.protocol import ` +
+  const code = `from sql_notebook_kit.visualize.protocol import ` +
     `_deliver_vscode_response as _rn_d;_rn_d(${JSON.stringify(encoded)})`;
   await executeWithTimeout(kernel, code, signal);
 }
@@ -214,7 +214,7 @@ function coordinatorFor(notebook: vscode.NotebookDocument): DeliveryCoordinator 
     {
       onExhausted(message, error) {
         void activeKernel(notebook).then(kernel => {
-          console.error('Redshift Notebooks bridge delivery exhausted.', {
+          console.error('SQL Notebook Kit bridge delivery exhausted.', {
             notebook: notebookKey,
             cell: message.cell_id,
             operation: message.operation,
@@ -345,21 +345,21 @@ async function handleWidgetState(
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  const channel = vscode.notebooks.createRendererMessaging('redshift-notebooks-bridge');
+  const channel = vscode.notebooks.createRendererMessaging('sql-notebook-kit-bridge');
   context.subscriptions.push(channel.onDidReceiveMessage(event => {
     void saveExport(channel, event).then(async handled => {
       if (handled || await copyText(channel, event)) return;
       await handleMessage(event);
     }).catch(error => {
-      console.error('Redshift Notebooks bridge request failed.', error);
+      console.error('SQL Notebook Kit bridge request failed.', error);
     });
   }));
   const widgetChannel = vscode.notebooks.createRendererMessaging(
-    'redshift-notebooks-widget-fallback'
+    'sql-notebook-kit-widget-fallback'
   );
   context.subscriptions.push(widgetChannel.onDidReceiveMessage(event => {
     void handleWidgetState(widgetChannel, event).catch(error => {
-      console.error('Redshift Notebooks widget classification failed.', error);
+      console.error('SQL Notebook Kit widget classification failed.', error);
     });
   }));
   context.subscriptions.push(vscode.workspace.onDidCloseNotebookDocument(closeNotebook));

@@ -9,8 +9,8 @@ from typing import Any, Literal
 import ipywidgets as widgets
 import pandas as pd
 
-from redshift_notebooks.results import NotebookResult
-from redshift_notebooks.visualize import (
+from sql_notebook_kit.results import NotebookResult
+from sql_notebook_kit.visualize import (
     FieldBinding,
     ThemeContext,
     VisualizationCollection,
@@ -23,25 +23,25 @@ ThemeName = Literal["light", "dark", "high_contrast"]
 
 LAB_CSS = """
 <style>
-.rn-lab {
-  --rn-lab-panel: #f6f8fa;
-  --rn-lab-border: #d0d7de;
-  --rn-lab-text: #1f2328;
-  color: var(--rn-lab-text);
+.snk-lab {
+  --snk-lab-panel: #f6f8fa;
+  --snk-lab-border: #d0d7de;
+  --snk-lab-text: #1f2328;
+  color: var(--snk-lab-text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-.rn-lab > .widget-html:first-child { margin-bottom: 12px; }
-.rn-lab-toolbar {
-  background: var(--rn-lab-panel);
-  border: 1px solid var(--rn-lab-border);
+.snk-lab > .widget-html:first-child { margin-bottom: 12px; }
+.snk-lab-toolbar {
+  background: var(--snk-lab-panel);
+  border: 1px solid var(--snk-lab-border);
   border-radius: 6px;
   padding: 10px;
   margin-bottom: 14px;
 }
-.rn-lab-toolbar-row { align-items: end; gap: 8px; flex-wrap: wrap; }
-.rn-lab-toolbar-row > .widget-inline-hbox { min-width: 12rem; }
-.rn-lab-status { min-height: 1.5rem; margin: 4px 0 0; }
-.rn-lab-frame {
+.snk-lab-toolbar-row { align-items: end; gap: 8px; flex-wrap: wrap; }
+.snk-lab-toolbar-row > .widget-inline-hbox { min-width: 12rem; }
+.snk-lab-status { min-height: 1.5rem; margin: 4px 0 0; }
+.snk-lab-frame {
   background: #ffffff;
   border: 1px solid #d0d7de;
   box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
@@ -50,28 +50,28 @@ LAB_CSS = """
   padding: 16px;
   transition: width 120ms ease;
 }
-.rn-lab-frame.rn-lab-theme-dark,
-.rn-lab-frame.rn-lab-theme-high-contrast {
+.snk-lab-frame.snk-lab-theme-dark,
+.snk-lab-frame.snk-lab-theme-high-contrast {
   background: #1e1e1e;
   border-color: #5a5a5a;
 }
-.rn-lab-frame.rn-lab-theme-dark .rn-viz-workspace,
-.rn-lab-frame.rn-lab-theme-high-contrast .rn-viz-workspace {
-  --rn-bg: #1e1e1e; --rn-surface: #252526; --rn-surface-muted: #313131;
-  --rn-surface-raised: #2d2d30; --rn-text: #f0f0f0; --rn-text-muted: #c4c4c4;
-  --rn-border: #5a5a5a; --rn-accent: #4daafc; --rn-accent-hover: #75beff;
-  --rn-focus: #75beff; --rn-danger: #f48771; --rn-warning-bg: #3b2e00;
-  --rn-warning-text: #ffd866; --rn-selection-bg: #063b49; --rn-input-bg: #313131;
+.snk-lab-frame.snk-lab-theme-dark .snk-viz-workspace,
+.snk-lab-frame.snk-lab-theme-high-contrast .snk-viz-workspace {
+  --snk-bg: #1e1e1e; --snk-surface: #252526; --snk-surface-muted: #313131;
+  --snk-surface-raised: #2d2d30; --snk-text: #f0f0f0; --snk-text-muted: #c4c4c4;
+  --snk-border: #5a5a5a; --snk-accent: #4daafc; --snk-accent-hover: #75beff;
+  --snk-focus: #75beff; --snk-danger: #f48771; --snk-warning-bg: #3b2e00;
+  --snk-warning-text: #ffd866; --snk-selection-bg: #063b49; --snk-input-bg: #313131;
 }
-.rn-lab-frame.rn-lab-theme-high-contrast .rn-viz-workspace {
+.snk-lab-frame.snk-lab-theme-high-contrast .snk-viz-workspace {
   border: 1px solid #f0f0f0;
 }
-.rn-lab-frame.rn-lab-zoom-200 > .rn-viz-workspace {
+.snk-lab-frame.snk-lab-zoom-200 > .snk-viz-workspace {
   width: 50%;
   zoom: 2;
 }
 @media (max-width: 700px) {
-  .rn-lab-frame { padding: 8px; }
+  .snk-lab-frame { padding: 8px; }
 }
 </style>
 """
@@ -278,25 +278,25 @@ class VisualizationLab:
         self.failure = widgets.Button(description="Fail save", icon="times")
         self.reset = widgets.Button(description="Reset workspace", icon="refresh")
         self.status = widgets.HTML(
-            '<div class="rn-lab-status" role="status" aria-live="polite">Lab ready.</div>'
+            '<div class="snk-lab-status" role="status" aria-live="polite">Lab ready.</div>'
         )
         self.frame = widgets.VBox()
-        self.frame.add_class("rn-lab-frame")
+        self.frame.add_class("snk-lab-frame")
 
         first_row = widgets.HBox([self.scenario, self.theme, self.width, self.zoom])
-        first_row.add_class("rn-lab-toolbar-row")
+        first_row.add_class("snk-lab-toolbar-row")
         second_row = widgets.HBox(
             [self.persistence, self.ack, self.conflict, self.failure, self.reset]
         )
-        second_row.add_class("rn-lab-toolbar-row")
+        second_row.add_class("snk-lab-toolbar-row")
         toolbar = widgets.VBox([first_row, second_row, self.status])
-        toolbar.add_class("rn-lab-toolbar")
+        toolbar.add_class("snk-lab-toolbar")
         heading = widgets.HTML(
-            "<h2>Redshift Notebooks visualization lab</h2>"
+            "<h2>SQL Notebook Kit visualization lab</h2>"
             "<p>Production widgets with a simulated VS Code theme and metadata companion.</p>"
         )
         self.root = widgets.VBox([widgets.HTML(LAB_CSS), heading, toolbar, self.frame])
-        self.root.add_class("rn-lab")
+        self.root.add_class("snk-lab")
 
         self.scenario.observe(self._rebuild, names="value")
         self.theme.observe(self._change_theme, names="value")
@@ -311,7 +311,7 @@ class VisualizationLab:
 
     def _message(self, value: str) -> None:
         self.status.value = (
-            f'<div class="rn-lab-status" role="status" aria-live="polite">{value}</div>'
+            f'<div class="snk-lab-status" role="status" aria-live="polite">{value}</div>'
         )
 
     def _rebuild(self, _change: Any = None) -> None:
@@ -332,9 +332,9 @@ class VisualizationLab:
 
     def _change_theme(self, _change: Any = None) -> None:
         for name in ("light", "dark", "high-contrast"):
-            self.frame.remove_class(f"rn-lab-theme-{name}")
+            self.frame.remove_class(f"snk-lab-theme-{name}")
         theme = str(self.theme.value)
-        self.frame.add_class(f"rn-lab-theme-{theme.replace('_', '-')}")
+        self.frame.add_class(f"snk-lab-theme-{theme.replace('_', '-')}")
         self.bridge.set_theme(theme)  # type: ignore[arg-type]
 
     def _change_width(self, _change: Any = None) -> None:
@@ -342,9 +342,9 @@ class VisualizationLab:
         self.frame.layout.max_width = "100%"
 
     def _change_zoom(self, _change: Any = None) -> None:
-        self.frame.remove_class("rn-lab-zoom-200")
+        self.frame.remove_class("snk-lab-zoom-200")
         if self.zoom.value == "200":
-            self.frame.add_class("rn-lab-zoom-200")
+            self.frame.add_class("snk-lab-zoom-200")
 
     def _change_persistence(self, _change: Any = None) -> None:
         self.bridge.set_availability(str(self.persistence.value))

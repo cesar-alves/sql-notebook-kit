@@ -1,7 +1,7 @@
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from redshift_notebooks import cli
+from sql_notebook_kit import cli
 
 
 def test_vscode_install_uses_selected_cli_without_a_shell(monkeypatch, capsys):
