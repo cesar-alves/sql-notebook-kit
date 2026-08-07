@@ -17,7 +17,17 @@ uv pip install -e '.[redshift,viz]'
 Use the resulting environment as the notebook kernel.
 
 For VS Code, install the companion bundled in the same Python package and
-reload the window:
+reload the window. When using an editable source checkout, compile and stage
+the VSIX first if it is missing or the frontend sources have changed:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm package:vscode
+```
+
+Published wheels already contain the compiled VSIX. Install it into the active
+VS Code extension host with:
 
 ```bash
 redshift-notebooks vscode install
