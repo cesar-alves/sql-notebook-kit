@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import html
+import io
 from contextlib import suppress
 from dataclasses import replace
 from importlib.resources import files
@@ -14,6 +16,7 @@ from redshift_notebooks.visualize.core import (
     build_figure,
     classify_columns,
     infer_visualization,
+    prepare_data,
     validate_visualization,
 )
 from redshift_notebooks.visualize.models import FieldBinding, VisualizationSpec
@@ -23,6 +26,94 @@ from redshift_notebooks.visualize.registry import (
 )
 
 WORKSPACE_CSS = "<style>" + files(__package__).joinpath("workspace.css").read_text() + "</style>"
+
+
+def _is_missing(value: Any) -> bool:
+    import pandas as pd
+    from pandas.api.types import is_scalar
+
+    return bool(pd.isna(value)) if is_scalar(value) else False
+
+
+def _cell_text(value: Any) -> str:
+    return "" if _is_missing(value) else str(value)
+
+
+def _frame_tsv(frame: Any) -> str:
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, delimiter="\t", lineterminator="\n", quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(str(column) for column in frame.columns)
+    writer.writerows(
+        [_cell_text(value) for value in row]
+        for row in frame.itertuples(index=False, name=None)
+    )
+    return output.getvalue().removesuffix("\n")
+
+
+def _copy_frame(frame: Any, spec: VisualizationSpec) -> tuple[Any, Any]:
+    """Return the rendered fields from the deterministic visualization preparation path."""
+    prepared = prepare_data(frame, spec)
+    if spec.chart_type == "heatmap":
+        result = prepared.frame.reset_index()
+        y_binding = next(item for item in spec.fields if item.role == "y")
+        result.columns = [
+            y_binding.label or y_binding.column,
+            *(str(column) for column in prepared.frame.columns),
+        ]
+        return result, prepared
+
+    if spec.chart_type == "table" and not spec.fields:
+        bindings = [
+            FieldBinding("visible", str(column), index)
+            for index, column in enumerate(frame.columns)
+        ]
+    else:
+        bindings = list(spec.fields)
+    columns: list[str] = []
+    labels: list[str] = []
+    for binding in bindings:
+        column = prepared.columns[binding.column_index]
+        if column in columns or column not in prepared.frame:
+            continue
+        columns.append(column)
+        labels.append(binding.label or binding.column)
+    result = prepared.frame.loc[:, columns].copy()
+    result.columns = labels
+    return result, prepared
+
+
+def _table_html(frame: Any, *, label: str) -> str:
+    headers = "".join(
+        f'<th scope="col" tabindex="{0 if index == 0 else -1}" '
+        f'data-rn-row="0" data-rn-column="{index}">'
+        f"{html.escape(str(column))}</th>"
+        for index, column in enumerate(frame.columns)
+    )
+    rows: list[str] = []
+    for row_index, row in enumerate(frame.itertuples(index=False, name=None), start=1):
+        cells = []
+        for column_index, value in enumerate(row):
+            text = _cell_text(value)
+            missing = _is_missing(value)
+            display = "—" if missing else text
+            null = ' data-rn-null="true"' if missing else ""
+            cells.append(
+                f'<td tabindex="-1" data-rn-row="{row_index}" '
+                f'data-rn-column="{column_index}"{null}>{html.escape(display)}</td>'
+            )
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    return (
+        f'<div class="rn-table-wrap rn-copy-table"><table role="grid" '
+        f'aria-label="{html.escape(label)}"><thead><tr>{headers}</tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table></div>'
+    )
+
+
+def _copy_payload(frame: Any) -> str:
+    return (
+        '<textarea class="rn-copy-payload" hidden readonly aria-hidden="true">'
+        f"{html.escape(_frame_tsv(frame))}</textarea>"
+    )
 
 
 class VisualizationWorkspace:
@@ -63,6 +154,12 @@ class VisualizationWorkspace:
         self.add_button = widgets.Button(description="+", tooltip="Add visualization")
         self.add_button.add_class("rn-add-tab")
         self.add_button.on_click(self._open_add)
+        self.copy_button = widgets.Button(
+            description="Copy table",
+            icon="copy",
+            tooltip="Copy the complete bounded result as TSV",
+        )
+        self.copy_button.add_class("rn-copy-button")
         self.export_button = widgets.Button(
             description="Export PNG",
             icon="download",
@@ -84,6 +181,7 @@ class VisualizationWorkspace:
         self.duplicate_button.on_click(self._duplicate_active)
         self.delete_button.on_click(self._delete_active)
         for button in (
+            self.copy_button,
             self.export_button,
             self.edit_button,
             self.rename_button,
@@ -94,6 +192,7 @@ class VisualizationWorkspace:
         self.delete_button.add_class("rn-context-danger")
         self.context_actions = widgets.HBox(
             [
+                self.copy_button,
                 self.export_button,
                 self.edit_button,
                 self.rename_button,
@@ -112,11 +211,15 @@ class VisualizationWorkspace:
         self.export_status = widgets.HTML(
             '<div class="rn-export-status" role="status" aria-live="polite"></div>'
         )
+        self.copy_status = widgets.HTML(
+            '<div class="rn-copy-status" role="status" aria-live="polite"></div>'
+        )
         self.body = widgets.VBox([self.output])
         self.root = widgets.VBox(
             [
                 self.css,
                 self.toolbar,
+                self.copy_status,
                 self.export_status,
                 self.status,
                 self.body,
@@ -168,18 +271,6 @@ class VisualizationWorkspace:
         self.manager.activate(change["new"] or None)
         self._show_active()
 
-    def _table_html(self) -> str:
-        frame = self.result.dataframe.copy()
-        rendered = (
-            frame.astype(object)
-            .where(frame.notna(), "—")
-            .to_html(index=False, escape=True, border=0)
-        )
-        return (
-            '<div class="rn-table-wrap" tabindex="0" aria-label="Query result table">'
-            f"{rendered}</div>"
-        )
-
     def _show_active(self) -> None:
         from IPython.display import display
 
@@ -187,19 +278,39 @@ class VisualizationWorkspace:
         with self.output:
             self.output.clear_output(wait=True)
             if self.manager.collection.active_id is None:
-                display(self.widgets.HTML(self._table_html()))
+                display(
+                    self.widgets.HTML(
+                        _table_html(self.result.dataframe, label="Query result table")
+                    )
+                )
                 return
             spec = self.manager.get(self.manager.collection.active_id)
             try:
-                figure = build_figure(self.result.dataframe, spec, self.theme)
-                counts = figure.layout.meta.get("rn_row_counts", {}) if figure.layout.meta else {}
+                copy_frame, prepared = _copy_frame(self.result.dataframe, spec)
+                counts = {
+                    "source": prepared.source_rows,
+                    "filtered": prepared.filtered_rows,
+                    "plotted": prepared.plotted_rows,
+                }
                 count_text = (
                     f"{counts.get('source', 0):,} source → "
                     f"{counts.get('filtered', 0):,} filtered → "
                     f"{counts.get('plotted', 0):,} plotted rows"
                 )
                 display(self.widgets.HTML(f'<div role="status">{count_text}</div>'))
-                display(figure)
+                if spec.chart_type == "table":
+                    display(
+                        self.widgets.HTML(
+                            _table_html(copy_frame, label=f"{spec.name} table")
+                        )
+                    )
+                else:
+                    display(self.widgets.HTML(_copy_payload(copy_frame)))
+                    display(
+                        build_figure(
+                            self.result.dataframe, spec, self.theme, _prepared=prepared
+                        )
+                    )
             except VisualizationError as exc:
                 display(
                     self.widgets.HTML(
@@ -221,9 +332,22 @@ class VisualizationWorkspace:
         )
 
     def _update_context_actions(self) -> None:
-        self.context_actions.layout.display = (
-            "flex" if self.manager.collection.active_id is not None else "none"
+        active = self.manager.collection.active_id is not None
+        self.context_actions.layout.display = "flex"
+        self.copy_button.description = "Copy data" if active else "Copy table"
+        self.copy_button.tooltip = (
+            "Copy the prepared visualization data as TSV"
+            if active
+            else "Copy the complete bounded result as TSV"
         )
+        for button in (
+            self.export_button,
+            self.edit_button,
+            self.rename_button,
+            self.duplicate_button,
+            self.delete_button,
+        ):
+            button.layout.display = "" if active else "none"
 
     def _active_visualization(self) -> VisualizationSpec | None:
         active_id = self.manager.collection.active_id

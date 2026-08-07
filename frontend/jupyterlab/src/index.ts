@@ -7,7 +7,7 @@ import type { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import type { KernelMessage } from '@jupyterlab/services';
 import { PostgreSQL, SQLDialect, sql } from '@codemirror/lang-sql';
 import { Widget } from '@lumino/widgets';
-import { isManagedSql, safeFilename } from './helpers.js';
+import { isManagedSql, safeFilename, writeClipboardText } from './helpers.js';
 import {
   COMM_TARGET,
   PROTOCOL_VERSION,
@@ -16,6 +16,7 @@ import {
   isCollection,
   isBridgeMessage,
   metadataWithCollection,
+  installTableCopy,
   type BridgeMessage,
   type Collection
 } from '@redshift-notebooks/protocol';
@@ -367,6 +368,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       createRenderer: options => new SQLExecutionErrorRenderer(options)
     }, 105);
     installExportHandler();
+    installTableCopy({ writeText: writeClipboardText });
     const forcedColors = window.matchMedia('(forced-colors: active)');
     const updateTheme = () => {
       currentTheme = forcedColors.matches

@@ -49,6 +49,20 @@ interface WidgetStateRequest {
   modelId: string;
 }
 
+interface CopyTextRequest {
+  kind: 'copy_text';
+  requestId: string;
+  text: string;
+}
+
+function isCopyTextRequest(value: unknown): value is CopyTextRequest {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<CopyTextRequest>;
+  return item.kind === 'copy_text' &&
+    typeof item.requestId === 'string' && item.requestId.length <= 80 &&
+    typeof item.text === 'string' && item.text.length <= 64_000_000;
+}
+
 function isWidgetStateRequest(value: unknown): value is WidgetStateRequest {
   if (!value || typeof value !== 'object') return false;
   const item = value as Partial<WidgetStateRequest>;
@@ -93,6 +107,34 @@ async function saveExport(
   }
   await channel.postMessage({
     kind: 'export_png_result', requestId: request.requestId, status, filename: request.filename
+  }, event.editor);
+  return true;
+}
+
+async function copyText(
+  channel: vscode.NotebookRendererMessaging,
+  event: { editor: vscode.NotebookEditor; message: unknown }
+): Promise<boolean> {
+  const candidate = event.message as Partial<CopyTextRequest> | null;
+  if (!candidate || candidate.kind !== 'copy_text') return false;
+  if (!isCopyTextRequest(event.message)) {
+    if (typeof candidate.requestId === 'string' && candidate.requestId.length <= 80) {
+      await channel.postMessage({
+        kind: 'copy_text_result', requestId: candidate.requestId, status: 'failed'
+      }, event.editor);
+    }
+    return true;
+  }
+  const request = event.message;
+  let status: 'copied' | 'failed' = 'failed';
+  try {
+    await vscode.env.clipboard.writeText(request.text);
+    status = 'copied';
+  } catch (error) {
+    console.error('Redshift Notebooks text copy failed.', error);
+  }
+  await channel.postMessage({
+    kind: 'copy_text_result', requestId: request.requestId, status
   }, event.editor);
   return true;
 }
@@ -305,7 +347,10 @@ async function handleWidgetState(
 export function activate(context: vscode.ExtensionContext): void {
   const channel = vscode.notebooks.createRendererMessaging('redshift-notebooks-bridge');
   context.subscriptions.push(channel.onDidReceiveMessage(event => {
-    void saveExport(channel, event).then(handled => handled ? undefined : handleMessage(event)).catch(error => {
+    void saveExport(channel, event).then(async handled => {
+      if (handled || await copyText(channel, event)) return;
+      await handleMessage(event);
+    }).catch(error => {
       console.error('Redshift Notebooks bridge request failed.', error);
     });
   }));

@@ -452,14 +452,20 @@ def _empty_figure(message: str, template: Any) -> Any:
     return figure
 
 
-def build_figure(frame: Any, spec: VisualizationSpec, theme: ThemeContext | None = None) -> Any:
+def build_figure(
+    frame: Any,
+    spec: VisualizationSpec,
+    theme: ThemeContext | None = None,
+    *,
+    _prepared: PreparedData | None = None,
+) -> Any:
     """Validate, prepare, and render one visualization with an explicit theme."""
     import plotly.express as px
     import plotly.graph_objects as go
 
     theme = theme or ThemeContext.fallback("light")
     template = build_plotly_template(theme)
-    prepared = prepare_data(frame, spec)
+    prepared = _prepared or prepare_data(frame, spec)
     data = prepared.frame
     options = {**default_options(spec.chart_type), **spec.options}
     title = cast(str | None, options.get("title"))

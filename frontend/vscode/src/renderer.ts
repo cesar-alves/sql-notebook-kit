@@ -1,4 +1,4 @@
-import type { BridgeMessage } from '@redshift-notebooks/protocol';
+import { installTableCopy, type BridgeMessage } from '@redshift-notebooks/protocol';
 import type {
   ActivationFunction, OutputItem, RendererApi, RendererContext
 } from 'vscode-notebook-renderer';
@@ -37,6 +37,18 @@ interface ExportResult {
   requestId: string;
   status: 'saved' | 'canceled' | 'failed';
   filename: string;
+}
+
+interface CopyTextRequest {
+  kind: 'copy_text';
+  requestId: string;
+  text: string;
+}
+
+interface CopyTextResult {
+  kind: 'copy_text_result';
+  requestId: string;
+  status: 'copied' | 'failed';
 }
 
 const LIGHT = {
@@ -187,6 +199,27 @@ export const activate = ((context: RendererContext<unknown>): RendererApi => {
   const builtinRenderer = context.getRenderer?.('vscode.builtin-renderer');
   const cleanups = new Map<string, () => void>();
   const exports = new Map<string, { root: Element; filename: string }>();
+  const copies = new Map<string, {
+    resolve(): void; reject(): void; timer: number;
+  }>();
+  const disposeTableCopy = installTableCopy({
+    writeText(text: string): Promise<void> {
+      return new Promise((resolve, reject) => {
+        if (!context.postMessage) {
+          reject();
+          return;
+        }
+        const requestId = crypto.randomUUID();
+        const timer = window.setTimeout(() => {
+          copies.delete(requestId);
+          reject();
+        }, 10_000);
+        copies.set(requestId, { resolve, reject, timer });
+        const request: CopyTextRequest = { kind: 'copy_text', requestId, text };
+        context.postMessage(request);
+      });
+    }
+  });
   const exportListener = async (event: Event) => {
     const target = event.target instanceof Element ? event.target : null;
     const button = target?.closest('.rn-export-button');
@@ -234,6 +267,16 @@ export const activate = ((context: RendererContext<unknown>): RendererApi => {
   };
   document.addEventListener('click', exportListener, true);
   const messageDisposable = context.onDidReceiveMessage?.((message: unknown) => {
+    const copyResult = message as Partial<CopyTextResult>;
+    if (copyResult.kind === 'copy_text_result' && typeof copyResult.requestId === 'string') {
+      const pending = copies.get(copyResult.requestId);
+      if (!pending) return;
+      copies.delete(copyResult.requestId);
+      window.clearTimeout(pending.timer);
+      if (copyResult.status === 'copied') pending.resolve();
+      else pending.reject();
+      return;
+    }
     const result = message as Partial<ExportResult>;
     if (result.kind !== 'export_png_result' || typeof result.requestId !== 'string') return;
     const pending = exports.get(result.requestId);
@@ -282,6 +325,12 @@ export const activate = ((context: RendererContext<unknown>): RendererApi => {
         cleanups.clear();
         document.removeEventListener('click', exportListener, true);
         messageDisposable?.dispose();
+        disposeTableCopy();
+        for (const pending of copies.values()) {
+          window.clearTimeout(pending.timer);
+          pending.reject();
+        }
+        copies.clear();
         exports.clear();
         stylesheet.remove();
         return;

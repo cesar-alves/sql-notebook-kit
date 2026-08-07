@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { isManagedSql, safeFilename } from './helpers.js';
+import { isManagedSql, safeFilename, writeClipboardText } from './helpers.js';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  document.body.replaceChildren();
+});
 
 describe('Redshift notebook editor helpers', () => {
   it('recognizes supported SQL magic forms without swallowing later Python', () => {
@@ -17,5 +22,25 @@ describe('Redshift notebook editor helpers', () => {
     expect(safeFilename(' Revenue / region:*? ')).toBe('Revenue - region---.png');
     expect(safeFilename('   ')).toBe('visualization.png');
     expect(safeFilename('x'.repeat(120))).toBe(`${'x'.repeat(100)}.png`);
+  });
+
+  it('uses the browser text clipboard when it is available', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+    await writeClipboardText('a\tb');
+
+    expect(writeText).toHaveBeenCalledWith('a\tb');
+  });
+
+  it('falls back to a temporary selected textarea', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
+
+    await writeClipboardText('fallback');
+
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(document.querySelector('textarea')).toBeNull();
   });
 });
