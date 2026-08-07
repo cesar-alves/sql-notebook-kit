@@ -2,6 +2,12 @@
 
 ## 0.1.0
 
+- Add an optional, separately owned SQLFrame transformation channel and expose
+  eligible managed SQL results as the source-only `_df` `LazyQuery` wrapper.
+- Add bounded lazy collection and visualization, SQL compilation, immutable
+  transformations, reconnect invalidation, ownership guards, and explicit
+  result disclosures for rerun and ineligible-query behavior.
+
 - Support managed one-line and standalone-marker multiline `%sql` alongside
   `%%sql`, add Redshift-aware editor highlighting, and collapse sanitized SQL
   diagnostics behind the concise Redshift message.

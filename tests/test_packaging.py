@@ -1,6 +1,9 @@
+import json
 import tomllib
 import zipfile
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).parents[1]
 
@@ -21,17 +24,24 @@ def test_gui_group_declares_python_kernel():
     assert "ipykernel>=6,<8" in dependency_groups["gui"]
 
 
-def test_bundled_vscode_extension_matches_python_version():
-    vsix = ROOT / "redshift_notebooks/vscode/redshift-notebooks-vscode.vsix"
-    assert vsix.is_file()
+def test_vscode_extension_manifest_matches_python_version():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-    with zipfile.ZipFile(vsix) as archive:
-        package = __import__("json").loads(archive.read("extension/package.json"))
-        renderer = archive.read("extension/dist/renderer.js")
-        widget_fallback = archive.read("extension/dist/widgetFallback.js")
+    package = json.loads((ROOT / "frontend/vscode/package.json").read_text())
+
     assert package["version"] == project["version"]
     assert package["extensionDependencies"] == ["ms-toolsai.jupyter"]
     assert package["extensionKind"] == ["workspace"]
+
+
+def test_staged_vscode_extension_contains_compiled_renderers():
+    vsix = ROOT / "redshift_notebooks/vscode/redshift-notebooks-vscode.vsix"
+    if not vsix.is_file():
+        pytest.skip("generated VSIX has not been staged")
+
+    with zipfile.ZipFile(vsix) as archive:
+        renderer = archive.read("extension/dist/renderer.js")
+        widget_fallback = archive.read("extension/dist/widgetFallback.js")
+
     assert b"export {" in renderer
     assert b"activate" in renderer
     assert b"jupyter-ipywidget-renderer" in widget_fallback

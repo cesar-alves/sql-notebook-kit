@@ -48,6 +48,14 @@ The package does not inspect provider tokens or replay failed statements. A
 failed statement may have reached Redshift, so automatic replay could duplicate
 a write.
 
+An optional `transform_session_factory` owns a second execution channel. It
+must return a SQLFrame-compatible session with `sql()` and `stop()` methods.
+It is invoked lazily by the first transformation operation, and its physical
+connection must be distinct from the eager DBAPI connection. `reconnect()` and
+`dispose()` stop both channels. See the
+[lazy transformation guide](transformations.md) for the complete isolation
+contract.
+
 ## Failure behavior
 
 A factory MUST raise an exception on configuration, authentication, or network

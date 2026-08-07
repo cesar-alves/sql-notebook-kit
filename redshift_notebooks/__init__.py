@@ -6,15 +6,18 @@ from redshift_notebooks.errors import (
     AuthenticationError,
     ConfigurationError,
     FactoryImportError,
+    LazyQueryError,
     MissingOptionalDependencyError,
     NotebookConnectionError,
     RedshiftNotebooksError,
     SQLExecutionError,
+    StaleLazyQueryError,
     VisualizationConfigError,
     VisualizationError,
     VisualizationPersistenceError,
     VisualizationRenderError,
 )
+from redshift_notebooks.lazy import LazyQuery
 from redshift_notebooks.session import NotebookSession, create_session
 
 __all__ = [
@@ -23,11 +26,14 @@ __all__ = [
     "DBAPIConnection",
     "FactoryImportError",
     "FactorySpec",
+    "LazyQuery",
+    "LazyQueryError",
     "MissingOptionalDependencyError",
     "NotebookConnectionError",
     "NotebookSession",
     "RedshiftNotebooksError",
     "SQLExecutionError",
+    "StaleLazyQueryError",
     "VisualizationConfigError",
     "VisualizationError",
     "VisualizationPersistenceError",

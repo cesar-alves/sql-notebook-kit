@@ -18,11 +18,13 @@ _ALIAS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 
 @dataclass(slots=True)
 class _NotebookState:
+    session: Any
     alias: str
     engine: Any
     max_rows: int
     allow_large_results: bool
     detach_results: bool
+    visualization_enabled: bool
 
 
 def _visualization_available() -> bool:
@@ -36,12 +38,22 @@ def _visualization_available() -> bool:
     return True
 
 
+def _pandas_available() -> bool:
+    try:
+        import pandas  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def _detach_result(
     raw: Any,
     max_rows: int,
     *,
     cell_id: str | None = None,
     visualization_metadata: dict[str, Any] | None = None,
+    lazy_notice: str | None = None,
+    visualization_enabled: bool = True,
 ) -> NotebookResult | Any:
     """Consume at most max_rows + 1 from a JupySQL 0.11 ResultSet."""
     if not all(hasattr(raw, attribute) for attribute in ("keys", "fetchmany", "DataFrame")):
@@ -70,6 +82,73 @@ def _detach_result(
         max_rows=max_rows,
         cell_id=cell_id,
         visualization_metadata=visualization_metadata,
+        lazy_notice=lazy_notice,
+        visualization_enabled=visualization_enabled,
+    )
+
+
+def _sql_source(line: str, cell: str | None) -> str:
+    """Extract the SQL portion of a managed magic invocation."""
+    from sql.parse import split_args_and_sql
+
+    _arguments, line_sql = split_args_and_sql(line)
+    if cell is None:
+        return line_sql or line
+    return "\n".join(part for part in (line_sql, cell) if part)
+
+
+def _lazy_query_for_result(
+    state: _NotebookState,
+    raw: Any,
+    *,
+    line: str,
+    cell: str | None,
+) -> tuple[Any | None, str | None]:
+    """Build a source-only lazy handle and its disclosure for a relation result."""
+    if not state.session.transformations_enabled:
+        return None, None
+    try:
+        keys = list(raw.keys)
+    except Exception:
+        return None, None
+    if not keys:
+        return None, None
+
+    source = _sql_source(line, cell)
+    if "{{" in source or "{%" in source:
+        return None, (
+            "Not assigned to _df: templated SQL cannot be reconstructed safely. "
+            "The previous _df, if any, is unchanged."
+        )
+    try:
+        import sqlparse
+
+        source_statements = [item for item in sqlparse.split(source) if item.strip()]
+    except Exception:
+        source_statements = []
+    if len(source_statements) != 1:
+        return None, (
+            "Not assigned to _df: only one SQL statement can be transformed lazily. "
+            "The previous _df, if any, is unchanged."
+        )
+
+    statement = getattr(raw, "_statement", None)
+    if not isinstance(statement, str) or not statement.strip():
+        return None, (
+            "Not assigned to _df: the executed query could not be reconstructed. "
+            "The previous _df, if any, is unchanged."
+        )
+    from redshift_notebooks.lazy import validate_relation_query
+
+    reason = validate_relation_query(statement)
+    if reason is not None:
+        return None, (
+            f"Not assigned to _df: {reason}. The previous _df, if any, is unchanged."
+        )
+    lazy_query = state.session.sql(statement)
+    return lazy_query, (
+        "Available as _df for lazy Python transformations. Collecting it reruns "
+        "this query on a separate connection."
     )
 
 
@@ -178,11 +257,18 @@ def _install_session_sql_magic(ipython: Any, state: _NotebookState) -> None:
                 visualization_metadata = (
                     namespace.get("visualizations") if isinstance(namespace, dict) else None
                 )
+                lazy_query, lazy_notice = _lazy_query_for_result(
+                    active_state, raw, line=line, cell=cell
+                )
+                if lazy_query is not None:
+                    ipython.push({"_df": lazy_query})
                 return _detach_result(
                     raw,
                     active_state.max_rows,
                     cell_id=cell_id,
                     visualization_metadata=visualization_metadata,
+                    lazy_notice=lazy_notice,
+                    visualization_enabled=active_state.visualization_enabled,
                 )
             return raw
         finally:
@@ -228,22 +314,31 @@ def register_session(
     line = f"--alias {alias} {variable}" if alias else variable
     ipython.run_line_magic("sql", line)
 
-    detach_results = visualization and _visualization_available()
-    if visualization and not detach_results:
+    visualization_enabled = visualization and _visualization_available()
+    if visualization and not visualization_enabled:
         warnings.warn(
             "visualization extras are not installed; SQL results will use "
             "JupySQL's table output. "
             "Install 'redshift-notebooks[viz]' to enable the chart builder.",
             stacklevel=2,
         )
+    if session.transformations_enabled and not _pandas_available():
+        from redshift_notebooks.errors import MissingOptionalDependencyError
+
+        raise MissingOptionalDependencyError(
+            "lazy transformations require 'redshift-notebooks[transform]'"
+        )
+    detach_results = visualization_enabled or session.transformations_enabled
     _install_session_sql_magic(
         ipython,
         _NotebookState(
+            session=session,
             alias=alias or str(session.engine.url),
             engine=session.engine,
             max_rows=max_rows,
             allow_large_results=allow_large_results,
             detach_results=detach_results,
+            visualization_enabled=visualization_enabled,
         ),
     )
 

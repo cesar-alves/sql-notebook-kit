@@ -18,6 +18,12 @@
     options:
       members: true
 
+## Lazy transformations
+
+::: redshift_notebooks.lazy
+    options:
+      members: true
+
 ## Profiles
 
 ::: redshift_notebooks.adapters.config

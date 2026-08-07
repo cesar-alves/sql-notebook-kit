@@ -9,7 +9,17 @@ uv pip install -e '.[viz]'
 The visualization extra supports pandas 3.0.5 or newer within the pandas 3
 release series and installs `nbformat` for Plotly notebook MIME rendering.
 JupyterLab 4 metadata support and the VS Code companion VSIX are bundled with
-the Python wheel. Install the latter into the active VS Code extension host:
+the Python wheel. Published wheels already contain the compiled VSIX. For an
+editable source checkout, compile and stage it first if it is missing or the
+frontend sources have changed:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm package:vscode
+```
+
+Then install it into the active VS Code extension host:
 
 ```bash
 redshift-notebooks vscode install

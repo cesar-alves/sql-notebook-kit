@@ -17,7 +17,17 @@ uv pip install -e '.[redshift,viz]'
 Use the resulting environment as the notebook kernel.
 
 For VS Code, install the companion bundled in the same Python package and
-reload the window:
+reload the window. When using an editable source checkout, compile and stage
+the VSIX first if it is missing or the frontend sources have changed:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm package:vscode
+```
+
+Published wheels already contain the compiled VSIX. Install it into the active
+VS Code extension host with:
 
 ```bash
 redshift-notebooks vscode install
@@ -68,6 +78,28 @@ wheel-bundled VS Code companion is available; otherwise the workspace clearly us
 session-only mode. The visualization extra includes the notebook MIME support
 required by Plotly and requires pandas 3.0.5 or newer within the pandas 3
 release series.
+
+## Lazy SQL-to-Python transformations
+
+Configure a separately owned SQLFrame session to expose each eligible SQL
+result as `_df`:
+
+```python
+session = create_session(
+    factory=<dbapi-factory>,
+    dialect="<sqlalchemy-dialect>",
+    transform_session_factory=<sqlframe-session-factory>,
+)
+session.register()
+```
+
+After a single `SELECT`, `_df` is a safe `LazyQuery` wrapper. Use
+`_df.apply(...)` for SQLFrame transformations, `compile()` to inspect SQL, and
+bounded `collect()` or `visualize()` actions. Acting on `_df` reruns the source
+query through the separate transformation connection; transactions, temporary
+tables, and session variables are not shared with `%sql`. See the
+[lazy transformation guide](docs/transformations.md) for eligibility,
+lifecycle, cost, and DuckDB setup details.
 
 ## Named profile
 
@@ -129,6 +161,10 @@ pnpm check && pnpm test
 pnpm build && pnpm package:vscode
 uv build
 ```
+
+The staged VSIX is generated and ignored by Git. Python distribution builds
+fail with an actionable message when it is absent, ensuring published wheels
+and source distributions always contain the matching VS Code companion.
 
 To iterate on the visualization controls without rebuilding or reinstalling the
 VS Code extension, launch the interactive design lab and open the printed local

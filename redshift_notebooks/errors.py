@@ -43,6 +43,14 @@ class MissingOptionalDependencyError(RedshiftNotebooksError, ImportError):
     """An optional package extra is required for the requested feature."""
 
 
+class LazyQueryError(RedshiftNotebooksError):
+    """A lazy transformation could not be constructed or executed safely."""
+
+
+class StaleLazyQueryError(LazyQueryError):
+    """A lazy query belongs to a transform session that has been reconnected."""
+
+
 class VisualizationError(RedshiftNotebooksError):
     """Base class for visualization failures."""
 

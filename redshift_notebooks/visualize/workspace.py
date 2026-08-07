@@ -142,6 +142,14 @@ class VisualizationWorkspace:
         self.notice = widgets.HTML(
             f'<div class="rn-row-notice" role="status">{html.escape(message)}</div>'
         )
+        self.lazy_notice = widgets.HTML(
+            (
+                '<div class="rn-lazy-notice"><em>'
+                f"{html.escape(result.lazy_notice)}</em></div>"
+            )
+            if result.lazy_notice
+            else ""
+        )
         self.persistence = widgets.HTML()
         self.reapply_button = widgets.Button(
             description="Reapply changes", icon="refresh", layout=widgets.Layout(display="none")
@@ -224,6 +232,7 @@ class VisualizationWorkspace:
                 self.status,
                 self.body,
                 self.notice,
+                self.lazy_notice,
                 widgets.HBox([self.persistence, self.reapply_button]),
             ]
         )
