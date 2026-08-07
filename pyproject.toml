@@ -99,6 +99,9 @@ packages = ["redshift_notebooks"]
 "redshift_notebooks/labextension" = "share/jupyter/labextensions/@redshift-notebooks/jupyterlab"
 
 [tool.hatch.build]
+artifacts = [
+    "redshift_notebooks/vscode/redshift-notebooks-vscode.vsix",
+]
 include = [
     "redshift_notebooks/**/*.py",
     "redshift_notebooks/**/*.css",
@@ -110,6 +113,7 @@ include = [
     "CHANGELOG.md",
     "docs/**/*.md",
     "examples/*.ipynb",
+    "hatch_build.py",
     "mkdocs.yml",
     "package.json",
     "pnpm-lock.yaml",
@@ -117,6 +121,9 @@ include = [
     "frontend/**/*",
     "!frontend/**/node_modules/**/*",
 ]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

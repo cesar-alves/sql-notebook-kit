@@ -162,6 +162,10 @@ pnpm build && pnpm package:vscode
 uv build
 ```
 
+The staged VSIX is generated and ignored by Git. Python distribution builds
+fail with an actionable message when it is absent, ensuring published wheels
+and source distributions always contain the matching VS Code companion.
+
 To iterate on the visualization controls without rebuilding or reinstalling the
 VS Code extension, launch the interactive design lab and open the printed local
 URL:
