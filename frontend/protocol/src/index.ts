@@ -1,4 +1,5 @@
 export const PROTOCOL_VERSION = 1 as const;
+export { installTableCopy, toTsv, type TableCopyOptions } from './tableCopy.js';
 export const COMM_TARGET = 'redshift_notebooks.visualizations.v1';
 export const METADATA_NAMESPACE = 'redshift_notebooks';
 

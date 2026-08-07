@@ -217,4 +217,36 @@ describe('VS Code bridge renderer', () => {
     });
     renderer.disposeOutputItem?.();
   });
+
+  it('routes prepared TSV through the VS Code host clipboard', async () => {
+    vi.useRealTimers();
+    const messages: unknown[] = [];
+    let receive: ((message: unknown) => void) | undefined;
+    const renderer = activate({
+      postMessage: (message: unknown) => messages.push(message),
+      onDidReceiveMessage: (listener: (message: unknown) => void) => {
+        receive = listener;
+        return { dispose: vi.fn() };
+      }
+    } as never);
+    const root = document.createElement('div');
+    root.className = 'rn-viz-workspace';
+    root.innerHTML = `
+      <button class="rn-copy-button">Copy data</button>
+      <div class="rn-copy-status"></div>
+      <textarea class="rn-copy-payload">Period\tRevenue\n2026-01\t3</textarea>`;
+    document.body.appendChild(root);
+
+    (root.querySelector('.rn-copy-button') as HTMLButtonElement).click();
+    await Promise.resolve();
+    const request = messages.find(item => (item as { kind?: string }).kind === 'copy_text') as {
+      requestId: string; text: string;
+    };
+    expect(request.text).toBe('Period\tRevenue\n2026-01\t3');
+
+    receive?.({ kind: 'copy_text_result', requestId: request.requestId, status: 'copied' });
+    await Promise.resolve();
+    expect(root.querySelector('.rn-copy-status')?.textContent).toBe('Copied visualization data.');
+    renderer.disposeOutputItem?.();
+  });
 });

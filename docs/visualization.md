@@ -37,6 +37,18 @@ the image to the clipboard and finally falls back to a normal download. The
 result row count appears below the active content, and table columns size
 themselves from their returned values before sharing any remaining width.
 
+The original result table exposes **Copy table** for its complete bounded local
+result. Click and drag across cells, Shift-click from an anchor, or use the arrow
+keys with Shift to select a rectangular range; Ctrl+C and Cmd+C copy exactly that
+range, including headers only when header cells are selected. Named table
+visualizations support the same interaction. Other visualization tabs expose
+**Copy data**, which copies the filtered, bucketed, aggregated, sorted, and
+limited data supplied to the chart. Histograms and other Plotly-derived marks
+copy their prepared source values rather than reconstructed bins or pixels.
+Clipboard data is plain TSV: nulls are empty and cells containing tabs, line
+breaks, or quotes are quoted. Copying never reruns SQL and never includes rows
+beyond the bounded local result.
+
 ```python
 result.dataframe
 result.truncated

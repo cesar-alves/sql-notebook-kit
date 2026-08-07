@@ -24,6 +24,7 @@ from redshift_notebooks.visualize import (
     list_visualization_definitions,
     prepare_data,
 )
+from redshift_notebooks.visualize.workspace import _copy_frame, _frame_tsv, _table_html
 
 
 def test_workspace_root_is_unframed_except_in_forced_colors():
@@ -53,7 +54,9 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
     assert tuple(workspace.tabs.options) == (("Table", ""),)
     assert workspace.add_button.description == "+"
     assert workspace.add_button.tooltip == "Add visualization"
-    assert workspace.context_actions.layout.display == "none"
+    assert workspace.context_actions.layout.display == "flex"
+    assert workspace.copy_button.description == "Copy table"
+    assert workspace.export_button.layout.display == "none"
     assert workspace.root.children.index(workspace.toolbar) < workspace.root.children.index(
         workspace.body
     )
@@ -71,6 +74,7 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
 
     assert workspace.context_actions.layout.display == "flex"
     assert [button.description for button in workspace.context_actions.children] == [
+        "Copy data",
         "Export PNG",
         "Edit",
         "Rename",
@@ -78,7 +82,69 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
         "Delete",
     ]
     workspace.tabs.value = ""
-    assert workspace.context_actions.layout.display == "none"
+    assert workspace.context_actions.layout.display == "flex"
+    assert workspace.copy_button.description == "Copy table"
+    assert workspace.export_button.layout.display == "none"
+
+
+def test_copy_frame_uses_prepared_render_fields_and_display_labels():
+    frame = pd.DataFrame(
+        {
+            "month": pd.to_datetime(["2026-01-01", "2026-01-20", "2026-02-01"]),
+            "region": ["west", "west", "east"],
+            "amount": [1, 2, 10],
+            "filter_only": [True, True, False],
+        }
+    )
+    chart = spec(
+        "bar",
+        (
+            binding("x", "month", 0, label="Period", date_grain="month"),
+            binding("y", "amount", 2, label="Revenue", aggregation="sum"),
+        ),
+        filters=(FilterSpec("filter_only", 3, "equals", True),),
+        options={"sort_by": "amount", "sort_direction": "descending", "limit": 1},
+    )
+
+    copied, prepared = _copy_frame(frame, chart)
+
+    assert prepared.source_rows == 3
+    assert prepared.filtered_rows == 2
+    assert list(copied.columns) == ["Period", "Revenue"]
+    assert copied.iloc[0].tolist() == [pd.Timestamp("2026-01-01"), 3]
+
+
+def test_copy_frame_exports_heatmap_matrix_with_axis_labels():
+    frame = pd.DataFrame({"x": ["a", "b"], "y": ["one", "one"], "value": [1, 2]})
+    chart = spec(
+        "heatmap",
+        (
+            binding("x", "x", 0),
+            binding("y", "y", 1, label="Row"),
+            binding("color", "value", 2),
+        ),
+    )
+
+    copied, _prepared = _copy_frame(frame, chart)
+
+    assert list(copied.columns) == ["Row", "a", "b"]
+    assert copied.iloc[0].tolist() == ["one", 1.0, 2.0]
+
+
+def test_tsv_and_copy_table_markup_preserve_special_values_safely():
+    frame = pd.DataFrame(
+        [["a\tb", 'say "hello"', "line one\nline two", None, [1, 2]]],
+        columns=["first", "quote", "multiline", "missing", 7],
+    )
+
+    assert _frame_tsv(frame) == (
+        'first\tquote\tmultiline\tmissing\t7\n'
+        '"a\tb"\t"say ""hello"""\t"line one\nline two"\t\t[1, 2]'
+    )
+    rendered = _table_html(frame, label='Query "result"')
+    assert 'aria-label="Query &quot;result&quot;"' in rendered
+    assert 'data-rn-null="true">—</td>' in rendered
+    assert "<script" not in rendered
 
 
 def test_editor_name_and_options_controls_have_theme_hooks(monkeypatch):
