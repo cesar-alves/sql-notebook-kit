@@ -69,6 +69,28 @@ session-only mode. The visualization extra includes the notebook MIME support
 required by Plotly and requires pandas 3.0.5 or newer within the pandas 3
 release series.
 
+## Lazy SQL-to-Python transformations
+
+Configure a separately owned SQLFrame session to expose each eligible SQL
+result as `_df`:
+
+```python
+session = create_session(
+    factory=<dbapi-factory>,
+    dialect="<sqlalchemy-dialect>",
+    transform_session_factory=<sqlframe-session-factory>,
+)
+session.register()
+```
+
+After a single `SELECT`, `_df` is a safe `LazyQuery` wrapper. Use
+`_df.apply(...)` for SQLFrame transformations, `compile()` to inspect SQL, and
+bounded `collect()` or `visualize()` actions. Acting on `_df` reruns the source
+query through the separate transformation connection; transactions, temporary
+tables, and session variables are not shared with `%sql`. See the
+[lazy transformation guide](docs/transformations.md) for eligibility,
+lifecycle, cost, and DuckDB setup details.
+
 ## Named profile
 
 Set `REDSHIFT_NOTEBOOKS_CONFIG` to a TOML file containing:

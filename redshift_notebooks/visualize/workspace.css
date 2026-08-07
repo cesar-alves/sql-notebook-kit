@@ -69,6 +69,11 @@
   color: var(--rn-text-muted); background: transparent; border: 0; padding: 6px 0 0;
   font-size: 0.875rem;
 }
+.rn-viz-workspace .rn-lazy-notice,
+.rn-lazy-notice {
+  color: var(--rn-text-muted, #57606a); background: transparent; border: 0;
+  padding: 2px 0 0; font-size: 0.8rem;
+}
 .rn-viz-workspace .rn-error { color: var(--rn-danger); }
 .rn-viz-workspace .rn-table-wrap { max-height: 480px; overflow: auto; }
 .rn-viz-workspace table {

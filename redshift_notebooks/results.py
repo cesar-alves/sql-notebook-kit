@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -27,6 +28,8 @@ class NotebookResult:
     max_rows: int = 10_000
     cell_id: str | None = None
     visualization_metadata: dict[str, Any] | None = None
+    lazy_notice: str | None = None
+    visualization_enabled: bool = True
     _visualizations: Any = field(default=None, init=False, repr=False)
     _workspace: Any = field(default=None, init=False, repr=False)
 
@@ -77,12 +80,23 @@ class NotebookResult:
                 f"Result truncated to {self.max_rows:,} local rows. Visual filters and "
                 "aggregations do not include unfetched rows.</div>"
             )
-        return banner + self.dataframe.head(100).to_html(index=False)
+        lazy_footer = (
+            "<div class='rn-lazy-notice' "
+            "style='color:var(--jp-ui-font-color2,GrayText);font-size:0.8rem;'>"
+            "<em>"
+            f"{html.escape(self.lazy_notice)}</em></div>"
+            if self.lazy_notice
+            else ""
+        )
+        return banner + self.dataframe.head(100).to_html(index=False) + lazy_footer
 
     def _ipython_display_(self) -> None:
-        from IPython.display import display
+        from IPython.display import HTML, display
 
-        try:
-            display(self.visualize())
-        except MissingOptionalDependencyError:
-            display(self.dataframe)
+        if self.visualization_enabled:
+            try:
+                display(self.visualize())
+                return
+            except MissingOptionalDependencyError:
+                pass
+        display(HTML(self._repr_html_()))

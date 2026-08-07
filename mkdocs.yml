@@ -6,6 +6,7 @@ nav:
   - Home: index.md
   - Factory contract: factory-contract.md
   - SSO guide: sso.md
+  - Lazy transformations: transformations.md
   - Visualization: visualization.md
   - Troubleshooting: troubleshooting.md
   - API reference: api.md
