@@ -1,7 +1,7 @@
 import pytest
 
-from redshift_notebooks.adapters import redshift
-from redshift_notebooks.errors import ConfigurationError
+from sql_notebook_kit.adapters import redshift
+from sql_notebook_kit.errors import ConfigurationError
 
 
 def test_browser_azure_sso_maps_documented_driver_options(monkeypatch):
@@ -33,7 +33,7 @@ def test_identity_center_sso_maps_documented_driver_options(monkeypatch):
     )
 
     assert captured["credentials_provider"] == "BrowserIdcAuthPlugin"
-    assert captured["idc_client_display_name"] == "redshift-notebooks"
+    assert captured["idc_client_display_name"] == "sql-notebook-kit"
 
 
 def test_sso_timeout_has_a_safe_minimum():

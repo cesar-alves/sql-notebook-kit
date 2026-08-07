@@ -1,5 +1,0 @@
-{
-  "packageManager": "python",
-  "packageName": "redshift-notebooks",
-  "uninstallInstructions": "Use your Python package manager to uninstall redshift-notebooks."
-}

@@ -1,34 +1,34 @@
 {
-  "name": "redshift-notebooks-vscode",
-  "displayName": "Redshift Notebooks Visualizations",
+  "name": "sql-notebook-kit-vscode",
+  "displayName": "SQL Notebook Kit Visualizations",
   "version": "0.1.0",
-  "publisher": "redshift-notebooks",
+  "publisher": "sql-notebook-kit",
   "license": "MIT",
-  "repository": "https://github.com/cesar-alves/redshift-notebooks",
+  "repository": "https://github.com/cesar-alves/sql-notebook-kit",
   "files": ["dist", "syntaxes", "LICENSE"],
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["workspace"],
   "extensionDependencies": ["ms-toolsai.jupyter"],
   "main": "./dist/extension.cjs",
   "activationEvents": [
-    "onRenderer:redshift-notebooks-bridge",
-    "onRenderer:redshift-notebooks-widget-fallback"
+    "onRenderer:sql-notebook-kit-bridge",
+    "onRenderer:sql-notebook-kit-widget-fallback"
   ],
   "contributes": {
     "notebookRenderer": [
       {
-        "id": "redshift-notebooks-bridge",
-        "displayName": "Redshift Notebooks Visualization Bridge",
+        "id": "sql-notebook-kit-bridge",
+        "displayName": "SQL Notebook Kit Visualization Bridge",
         "entrypoint": "./dist/renderer.js",
         "mimeTypes": [
-          "application/vnd.redshift-notebooks.bridge+json",
+          "application/vnd.sql-notebook-kit.bridge+json",
           "application/vnd.code.notebook.error"
         ],
         "requiresMessaging": "always"
       },
       {
-        "id": "redshift-notebooks-widget-fallback",
-        "displayName": "Redshift Notebooks Saved Visualization Fallback",
+        "id": "sql-notebook-kit-widget-fallback",
+        "displayName": "SQL Notebook Kit Saved Visualization Fallback",
         "entrypoint": {
           "extends": "jupyter-ipywidget-renderer",
           "path": "./dist/widgetFallback.js"
@@ -37,8 +37,8 @@
       }
     ],
     "grammars": [{
-      "scopeName": "redshift-notebooks.sql-magic",
-      "path": "./syntaxes/redshift-sql-magic.tmLanguage.json",
+      "scopeName": "sql-notebook-kit.sql-magic",
+      "path": "./syntaxes/sql-notebook-kit-sql-magic.tmLanguage.json",
       "injectTo": ["source.python"]
     }]
   },
@@ -48,7 +48,7 @@
     "test": "pnpm build && vitest run",
     "package": "vsce package --no-dependencies"
   },
-  "dependencies": { "@redshift-notebooks/protocol": "workspace:*" },
+  "dependencies": { "@sql-notebook-kit/protocol": "workspace:*" },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.100.0",

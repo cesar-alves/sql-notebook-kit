@@ -9,9 +9,9 @@ import plotly.io as pio
 import pytest
 from plotly.io import _renderers
 
-from redshift_notebooks.errors import VisualizationConfigError
-from redshift_notebooks.results import NotebookResult
-from redshift_notebooks.visualize import (
+from sql_notebook_kit.errors import VisualizationConfigError
+from sql_notebook_kit.results import NotebookResult
+from sql_notebook_kit.visualize import (
     FieldBinding,
     FilterSpec,
     ThemeContext,
@@ -24,16 +24,16 @@ from redshift_notebooks.visualize import (
     list_visualization_definitions,
     prepare_data,
 )
-from redshift_notebooks.visualize.workspace import _copy_frame, _frame_tsv, _table_html
+from sql_notebook_kit.visualize.workspace import _copy_frame, _frame_tsv, _table_html
 
 
 def test_workspace_root_is_unframed_except_in_forced_colors():
-    css = files("redshift_notebooks.visualize").joinpath("workspace.css").read_text()
+    css = files("sql_notebook_kit.visualize").joinpath("workspace.css").read_text()
     root_rule = css.split("}", maxsplit=1)[0]
     forced_colors = css.split("@media (forced-colors: active)", maxsplit=1)[1]
 
     assert "border: 0; border-radius: 0; padding: 8px;" in root_rule
-    assert "border: 1px solid var(--rn-border)" not in root_rule
+    assert "border: 1px solid var(--snk-border)" not in root_rule
     assert "border: 1px solid CanvasText" in forced_colors
 
 
@@ -63,9 +63,9 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
     assert workspace.root.children.index(workspace.body) < workspace.root.children.index(
         workspace.notice
     )
-    assert "rn-row-notice" in workspace.notice.value
-    assert "rn-export-button" in workspace.export_button._dom_classes
-    assert "rn-export-status" in workspace.export_status.value
+    assert "snk-row-notice" in workspace.notice.value
+    assert "snk-export-button" in workspace.export_button._dom_classes
+    assert "snk-export-status" in workspace.export_status.value
 
     chart = spec("histogram", (binding("value", "amount", 1),))
     result.visualizations.add(chart, persist=False)
@@ -143,7 +143,7 @@ def test_tsv_and_copy_table_markup_preserve_special_values_safely():
     )
     rendered = _table_html(frame, label='Query "result"')
     assert 'aria-label="Query &quot;result&quot;"' in rendered
-    assert 'data-rn-null="true">—</td>' in rendered
+    assert 'data-snk-null="true">—</td>' in rendered
     assert "<script" not in rendered
 
 
@@ -155,24 +155,24 @@ def test_editor_name_and_options_controls_have_theme_hooks(monkeypatch):
 
     workspace._open_editor(chart, creating=True)
 
-    assert "rn-name-control" in workspace.name_control._dom_classes
-    assert "rn-options-section" in workspace.option_box.children[0]._dom_classes
+    assert "snk-name-control" in workspace.name_control._dom_classes
+    assert "snk-options-section" in workspace.option_box.children[0]._dom_classes
 
 
 def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
-    css = files("redshift_notebooks.visualize").joinpath("workspace.css").read_text()
+    css = files("sql_notebook_kit.visualize").joinpath("workspace.css").read_text()
 
     assert "table-layout: auto; width: max-content; min-width: 100%;" in css
-    assert ".rn-row-notice" in css
-    assert "color: var(--rn-text-muted)" in css
-    assert ".rn-name-control input" in css
-    assert ".rn-options-section .lm-AccordionPanel-title" in css
+    assert ".snk-row-notice" in css
+    assert "color: var(--snk-text-muted)" in css
+    assert ".snk-name-control input" in css
+    assert ".snk-options-section .lm-AccordionPanel-title" in css
     assert ".jupyter-widget-Collapse-header" in css
-    assert "--jp-widgets-input-background-color: var(--rn-input-bg)" in css
+    assert "--jp-widgets-input-background-color: var(--snk-input-bg)" in css
     assert "select option { color-scheme: dark; }" in css
-    assert ".rn-dialog-panel" in css
-    assert "background: var(--rn-surface-muted) !important" in css
-    assert ".rn-viz-workspace.rn-theme-dark" in css
+    assert ".snk-dialog-panel" in css
+    assert "background: var(--snk-surface-muted) !important" in css
+    assert ".snk-viz-workspace.snk-theme-dark" in css
 
 
 def test_inference_uses_documented_priority_and_positions():
@@ -314,7 +314,7 @@ class DeferredBridge:
 
 
 def test_deferred_persistence_coalesces_edits_and_acknowledges_revisions():
-    from redshift_notebooks.visualize.manager import VisualizationManager
+    from sql_notebook_kit.visualize.manager import VisualizationManager
 
     bridge = DeferredBridge()
     result = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
@@ -334,7 +334,7 @@ def test_deferred_persistence_coalesces_edits_and_acknowledges_revisions():
 
 
 def test_manager_restores_execute_request_metadata_and_preserves_conflict_draft():
-    from redshift_notebooks.visualize.manager import VisualizationManager
+    from sql_notebook_kit.visualize.manager import VisualizationManager
 
     saved = VisualizationCollection(1, 4, None, ())
     bridge = DeferredBridge()
@@ -355,7 +355,7 @@ def test_manager_restores_execute_request_metadata_and_preserves_conflict_draft(
 
 
 def test_vscode_bridge_accepts_versioned_callback_and_ignores_invalid_payload(monkeypatch):
-    from redshift_notebooks.visualize import protocol
+    from sql_notebook_kit.visualize import protocol
 
     displayed = []
     timers = []

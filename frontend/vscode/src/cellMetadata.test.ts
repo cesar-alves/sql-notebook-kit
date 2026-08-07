@@ -15,7 +15,7 @@ const saved = {
 
 describe('VS Code Jupyter cell metadata', () => {
   it('reads the nested metadata sent to execute requests', () => {
-    const cell = { metadata: { redshift_notebooks: { visualizations: saved }, keep: true } };
+    const cell = { metadata: { sql_notebook_kit: { visualizations: saved }, keep: true } };
     expect(collectionFromCellMetadata(cell)).toEqual(saved);
     expect(hasVisualizationMetadata(cell)).toBe(true);
   });
@@ -33,7 +33,7 @@ describe('VS Code Jupyter cell metadata', () => {
     expect(migrated).toEqual({
       metadata: {
         keep: true,
-        redshift_notebooks: { visualizations: next }
+        sql_notebook_kit: { visualizations: next }
       },
       redshift_notebooks: { legacyKeep: true },
       vscodeKeep: true
@@ -43,7 +43,7 @@ describe('VS Code Jupyter cell metadata', () => {
   it('prefers canonical nested metadata over a stale legacy copy', () => {
     const nested = { ...saved, revision: 7 };
     expect(collectionFromCellMetadata({
-      metadata: { redshift_notebooks: { visualizations: nested } },
+      metadata: { sql_notebook_kit: { visualizations: nested } },
       redshift_notebooks: { visualizations: saved }
     })).toEqual(nested);
   });

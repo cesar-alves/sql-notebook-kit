@@ -2,6 +2,13 @@
 
 ## 0.1.0
 
+- Generalize the alpha project as SQL Notebook Kit with neutral Python,
+  frontend, CLI, configuration, metadata, MIME, comm, and CSS identities.
+- Add capability-driven built-in Redshift, DuckDB, Databricks, and BigQuery
+  adapters while retaining custom synchronous DBAPI factories.
+- Add one-way legacy visualization metadata migration; old imports, CLI names,
+  environment variables, MIME types, and extension IDs are intentionally unsupported.
+
 - Add an optional, separately owned SQLFrame transformation channel and expose
   eligible managed SQL results as the source-only `_df` `LazyQuery` wrapper.
 - Add bounded lazy collection and visualization, SQL compilation, immutable
@@ -17,7 +24,7 @@
   replace stale saved widget-model errors with a clear rerun placeholder.
 
 - Bundle the hardened VS Code companion in the Python wheel and add
-  `redshift-notebooks vscode install/status/path` commands.
+  `sql-notebook-kit vscode install/status/path` commands.
 - Correct VS Code cell matching and transport, validate bridge messages, and
   add deferred save acknowledgements, conflict recovery, and theme updates.
 - Export the VS Code notebook renderer as an ES module and follow live VS Code

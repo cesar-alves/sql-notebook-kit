@@ -3,5 +3,5 @@ import { resolve } from 'node:path';
 
 copyFileSync(
   resolve('frontend/jupyterlab/install.json'),
-  resolve('redshift_notebooks/labextension/install.json')
+  resolve('sql_notebook_kit/labextension/install.json')
 );

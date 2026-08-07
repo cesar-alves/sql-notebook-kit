@@ -1,5 +1,5 @@
 {
-  "name": "redshift-notebooks-frontends",
+  "name": "sql-notebook-kit-frontends",
   "private": true,
   "packageManager": "pnpm@10.14.0",
   "scripts": {
@@ -7,7 +7,7 @@
     "build:jupyterlab": "uv run --group frontend jupyter labextension build frontend/jupyterlab && node frontend/jupyterlab/copy-install.mjs",
     "check": "pnpm -r check",
     "test": "pnpm -r test",
-    "package:vscode": "pnpm --filter redshift-notebooks-vscode package && node frontend/vscode/stage.mjs"
+    "package:vscode": "pnpm --filter sql-notebook-kit-vscode package && node frontend/vscode/stage.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.2",

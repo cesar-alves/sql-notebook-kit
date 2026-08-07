@@ -4,16 +4,16 @@ import sqlite3
 import pandas as pd
 import pytest
 
-from redshift_notebooks.engine import make_engine, register
-from redshift_notebooks.errors import SQLExecutionError
-from redshift_notebooks.notebook import (
+from sql_notebook_kit.engine import make_engine, register
+from sql_notebook_kit.errors import SQLExecutionError
+from sql_notebook_kit.notebook import (
     _is_database_execution_error,
     _rewrite_standalone_percent_sql,
     _sql_error_summary,
     _visualization_available,
 )
-from redshift_notebooks.results import NotebookResult
-from redshift_notebooks.session import create_session
+from sql_notebook_kit.results import NotebookResult
+from sql_notebook_kit.session import create_session
 
 
 def _sqlite_factory(calls):

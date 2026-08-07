@@ -3,15 +3,15 @@ import sqlite3
 import pandas as pd
 import pytest
 
-from redshift_notebooks import LazyQuery, create_session
-from redshift_notebooks.errors import (
+from sql_notebook_kit import LazyQuery, create_session
+from sql_notebook_kit.errors import (
     ConfigurationError,
     LazyQueryError,
     SQLExecutionError,
     StaleLazyQueryError,
 )
-from redshift_notebooks.lazy import validate_relation_query
-from redshift_notebooks.results import NotebookResult
+from sql_notebook_kit.lazy import validate_relation_query
+from sql_notebook_kit.results import NotebookResult
 
 
 class _FakeDataFrame:
@@ -273,7 +273,7 @@ def test_templated_sql_result_preserves_previous_df():
 
 
 def test_lazy_disclosure_is_escaped_and_rendered_in_the_workspace():
-    from redshift_notebooks.visualize.workspace import (
+    from sql_notebook_kit.visualize.workspace import (
         WORKSPACE_CSS,
         VisualizationWorkspace,
     )
@@ -289,7 +289,7 @@ def test_lazy_disclosure_is_escaped_and_rendered_in_the_workspace():
     assert "Available as &lt;_df&gt; &amp; safe" in html
     assert "Available as &lt;_df&gt; &amp; safe" in workspace.lazy_notice.value
     assert "<em>" in workspace.lazy_notice.value
-    assert ".rn-lazy-notice" in WORKSPACE_CSS
+    assert ".snk-lazy-notice" in WORKSPACE_CSS
     assert "font-size: 0.8rem" in WORKSPACE_CSS
 
 

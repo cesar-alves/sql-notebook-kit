@@ -3,7 +3,7 @@ import types
 
 import pytest
 
-from redshift_notebooks.adapters import config
+from sql_notebook_kit.adapters import config
 
 
 def _install_fake_module(monkeypatch, recorded_calls):
@@ -32,10 +32,10 @@ def test_raises_helpful_error_when_factory_module_missing():
 
 
 def test_explicit_factory_wins_over_env_and_config(monkeypatch, tmp_path):
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_FACTORY", "env_pkg:get_connection")
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_FACTORY", "env_pkg:get_connection")
     config_path = tmp_path / "config.toml"
     config_path.write_text('[connection]\nfactory = "file_pkg:get_connection"\n')
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_CONFIG", str(config_path))
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_CONFIG", str(config_path))
 
     calls = []
     _install_fake_module(monkeypatch, calls)
@@ -53,10 +53,10 @@ def test_env_var_wins_over_config_file(monkeypatch, tmp_path):
     calls = []
     _install_fake_module(monkeypatch, calls)
     captured = _capture_connection_factory(monkeypatch)
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_FACTORY", "fake_conn_pkg:get_connection")
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_FACTORY", "fake_conn_pkg:get_connection")
     config_path = tmp_path / "config.toml"
     config_path.write_text('[connection]\nfactory = "file_pkg:get_connection"\n')
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_CONFIG", str(config_path))
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_CONFIG", str(config_path))
 
     config.get_configured_engine(kwargs={"db_user": "env-user"})
     captured["factory"]()
@@ -68,7 +68,7 @@ def test_config_file_used_when_no_arg_or_env(monkeypatch, tmp_path):
     calls = []
     _install_fake_module(monkeypatch, calls)
     captured = _capture_connection_factory(monkeypatch)
-    monkeypatch.delenv("REDSHIFT_NOTEBOOKS_FACTORY", raising=False)
+    monkeypatch.delenv("SQL_NOTEBOOK_KIT_FACTORY", raising=False)
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         "[connection]\n"
@@ -78,7 +78,7 @@ def test_config_file_used_when_no_arg_or_env(monkeypatch, tmp_path):
         'db_user = "file-user"\n'
         'preferred_role = "analyst"\n'
     )
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_CONFIG", str(config_path))
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_CONFIG", str(config_path))
 
     config.get_configured_engine()
     captured["factory"]()
@@ -90,7 +90,7 @@ def test_kwarg_env_var_overrides_config_file_kwarg(monkeypatch, tmp_path):
     calls = []
     _install_fake_module(monkeypatch, calls)
     captured = _capture_connection_factory(monkeypatch)
-    monkeypatch.delenv("REDSHIFT_NOTEBOOKS_FACTORY", raising=False)
+    monkeypatch.delenv("SQL_NOTEBOOK_KIT_FACTORY", raising=False)
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         "[connection]\n"
@@ -99,8 +99,8 @@ def test_kwarg_env_var_overrides_config_file_kwarg(monkeypatch, tmp_path):
         "[connection.kwargs]\n"
         'db_user = "file-user"\n'
     )
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_CONFIG", str(config_path))
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_KWARG_DB_USER", "env-user")
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_CONFIG", str(config_path))
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_KWARG_DB_USER", "env-user")
 
     config.get_configured_engine()
     captured["factory"]()
@@ -109,8 +109,8 @@ def test_kwarg_env_var_overrides_config_file_kwarg(monkeypatch, tmp_path):
 
 
 def test_raises_value_error_when_factory_cannot_be_resolved(monkeypatch, tmp_path):
-    monkeypatch.delenv("REDSHIFT_NOTEBOOKS_FACTORY", raising=False)
-    monkeypatch.setenv("REDSHIFT_NOTEBOOKS_CONFIG", str(tmp_path / "missing.toml"))
+    monkeypatch.delenv("SQL_NOTEBOOK_KIT_FACTORY", raising=False)
+    monkeypatch.setenv("SQL_NOTEBOOK_KIT_CONFIG", str(tmp_path / "missing.toml"))
 
     with pytest.raises(ValueError, match="factory"):
         config.get_configured_engine()

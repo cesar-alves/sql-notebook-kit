@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-This document specifies the next visualization system for `redshift-notebooks`.
+This document specifies the next visualization system for `sql-notebook-kit`.
 It replaces the current single-chart editor with a bounded, metadata-backed
 workspace inspired by the authoring experience of Databricks notebooks. The
 goal is not pixel-for-pixel parity. The goal is a predictable notebook workflow
@@ -42,7 +42,7 @@ The feature is complete when:
 ## Existing system
 
 The current implementation is concentrated in
-`redshift_notebooks/visualize.py` and `redshift_notebooks/results.py`. It has
+`sql_notebook_kit/visualize.py` and `sql_notebook_kit/results.py`. It has
 eight chart types, a flat frozen `ChartSpec`, one optional filter, one global
 aggregation, and a fixed row of ipywidgets. Every widget is displayed for every
 chart, whether or not the option applies. A result owns a single `chart` value,
@@ -208,9 +208,9 @@ Theme support is automatic. It is not a visualization setting and is never
 stored in `VisualizationSpec` or notebook metadata. The same applied
 visualization must follow the active frontend theme without becoming dirty.
 
-Every workspace root has the CSS class `rn-viz-workspace` and exactly one of
-`rn-theme-light`, `rn-theme-dark`, or `rn-theme-high-contrast`. All library CSS
-is scoped beneath `rn-viz-workspace`; it must not style generic notebook,
+Every workspace root has the CSS class `snk-viz-workspace` and exactly one of
+`snk-theme-light`, `snk-theme-dark`, or `snk-theme-high-contrast`. All library CSS
+is scoped beneath `snk-viz-workspace`; it must not style generic notebook,
 `.widget-*`, or `.dataframe` elements outside that root. In normal light and
 dark themes, the workspace root is unframed so it blends into the notebook
 output; component borders remain available for tables, controls, warnings, and
@@ -222,22 +222,22 @@ token contract:
 
 | Token | Use |
 | --- | --- |
-| `--rn-bg` | workspace and Plotly paper background |
-| `--rn-surface` | table cells, panels, menus, and Plotly plot background |
-| `--rn-surface-muted` | inactive tabs, alternating rows, and disabled controls |
-| `--rn-surface-raised` | dropdown menus, tooltips, and dialogs |
-| `--rn-text` | primary text and Plotly labels |
-| `--rn-text-muted` | help text, placeholders, and secondary counts |
-| `--rn-border` | table grid, dividers, inputs, and Plotly axes/grid |
-| `--rn-accent` | active tab, primary action, selected option, and links |
-| `--rn-accent-hover` | hovered primary action and link |
-| `--rn-focus` | keyboard focus ring |
-| `--rn-danger` | destructive action and validation error |
-| `--rn-warning-bg` | bounded-result and persistence-warning background |
-| `--rn-warning-text` | warning foreground |
-| `--rn-selection-bg` | selected row, field, or menu item background |
-| `--rn-input-bg` | input and select background |
-| `--rn-shadow` | menu/dialog shadow; `none` in high-contrast mode |
+| `--snk-bg` | workspace and Plotly paper background |
+| `--snk-surface` | table cells, panels, menus, and Plotly plot background |
+| `--snk-surface-muted` | inactive tabs, alternating rows, and disabled controls |
+| `--snk-surface-raised` | dropdown menus, tooltips, and dialogs |
+| `--snk-text` | primary text and Plotly labels |
+| `--snk-text-muted` | help text, placeholders, and secondary counts |
+| `--snk-border` | table grid, dividers, inputs, and Plotly axes/grid |
+| `--snk-accent` | active tab, primary action, selected option, and links |
+| `--snk-accent-hover` | hovered primary action and link |
+| `--snk-focus` | keyboard focus ring |
+| `--snk-danger` | destructive action and validation error |
+| `--snk-warning-bg` | bounded-result and persistence-warning background |
+| `--snk-warning-text` | warning foreground |
+| `--snk-selection-bg` | selected row, field, or menu item background |
+| `--snk-input-bg` | input and select background |
+| `--snk-shadow` | menu/dialog shadow; `none` in high-contrast mode |
 
 JupyterLab maps these tokens from public `--jp-*` variables, preferring
 `--jp-layout-color0/1/2`, `--jp-ui-font-color1/2`, `--jp-border-color1/2`,
@@ -269,7 +269,7 @@ If a host token is absent, use these deterministic fallbacks:
 
 Normal text must meet WCAG 2.2 AA contrast of 4.5:1 against its actual
 background. Large text, component boundaries, chart marks, and focus indicators
-must meet 3:1. A 2-pixel focus outline using `--rn-focus`, offset by 2 pixels,
+must meet 3:1. A 2-pixel focus outline using `--snk-focus`, offset by 2 pixels,
 is required and must not be removed for mouse interaction. Disabled controls
 may use reduced emphasis but their labels must remain readable.
 
@@ -330,15 +330,15 @@ are forbidden.
 The permanent result table and Table visualization use the same scoped table
 component:
 
-- table and cell backgrounds use `--rn-surface`, text uses `--rn-text`, and
-  grid lines use `--rn-border`;
+- table and cell backgrounds use `--snk-surface`, text uses `--snk-text`, and
+  grid lines use `--snk-border`;
 - columns use intrinsic content widths, distribute remaining workspace width
   through automatic table layout, and overflow horizontally when they cannot
   fit without clipping;
-- the header is sticky and uses `--rn-surface-muted`, semibold text, and a
+- the header is sticky and uses `--snk-surface-muted`, semibold text, and a
   bottom border at least two pixels wide;
-- alternating rows use `--rn-surface-muted` at no more than 60% opacity over
-  the surface; hover and keyboard-current rows use `--rn-selection-bg` plus a
+- alternating rows use `--snk-surface-muted` at no more than 60% opacity over
+  the surface; hover and keyboard-current rows use `--snk-selection-bg` plus a
   left accent indicator;
 - numeric values align right; boolean, datetime, and text values align left;
 - null values render as an em dash with muted text and accessible label `null`;
@@ -349,7 +349,7 @@ component:
 - conditional formatting supplied by a future feature must pass the same
   contrast checks and must include a non-color cue.
 
-The editor's preview surface uses `--rn-surface`, not a hard-coded white card.
+The editor's preview surface uses `--snk-surface`, not a hard-coded white card.
 Inactive tabs, disabled fields, dropdown options, tooltips, validation banners,
 and destructive confirmations must each have explicit token-based foreground,
 background, border, hover, focus, and selected states. Widget descriptions must
@@ -493,7 +493,7 @@ validates. A persistence failure leaves the in-memory operation applied but
 marks the collection dirty and reports the fallback state.
 
 The old `NotebookResult.chart` attribute is removed. The package exports the
-new public dataclasses from `redshift_notebooks.visualize`, not from the
+new public dataclasses from `sql_notebook_kit.visualize`, not from the
 top-level package, preserving the optional dependency boundary.
 
 ### Discovery API
@@ -617,7 +617,7 @@ The originating SQL code cell owns this namespaced metadata:
 
 ```json
 {
-  "redshift_notebooks": {
+  "sql_notebook_kit": {
     "visualizations": {
       "schema_version": 1,
       "revision": 3,
@@ -637,7 +637,7 @@ kernel; the workspace shows an upgrade-required message.
 
 Cell metadata is controlled by notebook frontends, so persistence requires a
 versioned bridge. JupyterLab uses the
-`redshift_notebooks.visualizations.v1` comm target. VS Code uses the companion's
+`sql_notebook_kit.visualizations.v1` comm target. VS Code uses the companion's
 custom MIME renderer for requests and the stable Microsoft Jupyter kernel API
 for deferred responses after the kernel becomes idle. VS Code restores the
 collection directly from execute-request cell metadata. Messages are JSON and
@@ -666,7 +666,7 @@ it never silently overwrites the newer metadata.
 
 JupyterLab support and the prebuilt VS Code VSIX are bundled into the Python
 wheel. The VS Code companion uses the public Notebook API and is installed with
-`redshift-notebooks vscode install`. The two implementations share
+`sql-notebook-kit vscode install`. The two implementations share
 protocol fixtures. A missing, timed-out, read-only, or incompatible bridge
 switches to session-only mode without disabling chart creation.
 
@@ -805,7 +805,7 @@ The implementation is accepted only when these pass:
 ```bash
 uv run pytest
 uv run ruff check .
-uv run mypy redshift_notebooks
+uv run mypy sql_notebook_kit
 uv run --group docs mkdocs build --strict
 uv build
 ```

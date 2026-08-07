@@ -5,7 +5,7 @@ import { Buffer } from 'node:buffer';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { BridgeMessage } from '@redshift-notebooks/protocol';
+import type { BridgeMessage } from '@sql-notebook-kit/protocol';
 import { activate } from './renderer.js';
 
 class MediaQuery {
@@ -46,7 +46,7 @@ const request: BridgeMessage = {
 function output(id = 'output', live = true) {
   return {
     id,
-    mime: 'application/vnd.redshift-notebooks.bridge+json',
+    mime: 'application/vnd.sql-notebook-kit.bridge+json',
     json: () => request,
     metadata: live ? { transient: { display_id: 'bridge' } } : {}
   } as never;
@@ -184,7 +184,7 @@ describe('VS Code bridge renderer', () => {
       stack: 'sanitized traceback'
     }), element, new AbortController().signal);
 
-    expect(element.querySelector('.rn-sql-error-summary')?.textContent)
+    expect(element.querySelector('.snk-sql-error-summary')?.textContent)
       .toBe('column missing (SQLSTATE 42703)');
     expect(element.querySelector('details')?.hasAttribute('open')).toBe(false);
     expect(element.querySelector('pre')?.textContent).toBe('sanitized traceback');
@@ -200,19 +200,19 @@ describe('VS Code bridge renderer', () => {
     renderer.renderOutputItem(output(), document.createElement('div'), new AbortController().signal);
 
     const root = document.createElement('div');
-    root.className = 'rn-viz-workspace';
+    root.className = 'snk-viz-workspace';
     root.innerHTML = `
-      <button class="rn-export-button">Export PNG</button>
-      <div class="rn-tabs"><button aria-pressed="true">Revenue / region</button></div>
+      <button class="snk-export-button">Export PNG</button>
+      <div class="snk-tabs"><button aria-pressed="true">Revenue / region</button></div>
       <div class="js-plotly-plot"></div>
-      <div class="rn-export-status"></div>`;
+      <div class="snk-export-status"></div>`;
     document.body.appendChild(root);
-    (root.querySelector('.rn-export-button') as HTMLButtonElement).click();
+    (root.querySelector('.snk-export-button') as HTMLButtonElement).click();
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(toImage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scale: 2 }));
     expect(messages.find(item => (item as { kind?: string }).kind === 'export_png'),
-      root.querySelector('.rn-export-status')?.textContent ?? '').toMatchObject({
+      root.querySelector('.snk-export-status')?.textContent ?? '').toMatchObject({
       kind: 'export_png', filename: 'Revenue - region.png', base64: 'iVBORw0KGgo='
     });
     renderer.disposeOutputItem?.();
@@ -230,14 +230,14 @@ describe('VS Code bridge renderer', () => {
       }
     } as never);
     const root = document.createElement('div');
-    root.className = 'rn-viz-workspace';
+    root.className = 'snk-viz-workspace';
     root.innerHTML = `
-      <button class="rn-copy-button">Copy data</button>
-      <div class="rn-copy-status"></div>
-      <textarea class="rn-copy-payload">Period\tRevenue\n2026-01\t3</textarea>`;
+      <button class="snk-copy-button">Copy data</button>
+      <div class="snk-copy-status"></div>
+      <textarea class="snk-copy-payload">Period\tRevenue\n2026-01\t3</textarea>`;
     document.body.appendChild(root);
 
-    (root.querySelector('.rn-copy-button') as HTMLButtonElement).click();
+    (root.querySelector('.snk-copy-button') as HTMLButtonElement).click();
     await Promise.resolve();
     const request = messages.find(item => (item as { kind?: string }).kind === 'copy_text') as {
       requestId: string; text: string;
@@ -246,7 +246,7 @@ describe('VS Code bridge renderer', () => {
 
     receive?.({ kind: 'copy_text_result', requestId: request.requestId, status: 'copied' });
     await Promise.resolve();
-    expect(root.querySelector('.rn-copy-status')?.textContent).toBe('Copied visualization data.');
+    expect(root.querySelector('.snk-copy-status')?.textContent).toBe('Copied visualization data.');
     renderer.disposeOutputItem?.();
   });
 });

@@ -34,7 +34,7 @@ def test_vscode_extension_manifest_matches_python_version():
 
 
 def test_staged_vscode_extension_contains_compiled_renderers():
-    vsix = ROOT / "redshift_notebooks/vscode/redshift-notebooks-vscode.vsix"
+    vsix = ROOT / "sql_notebook_kit/vscode/sql-notebook-kit-vscode.vsix"
     if not vsix.is_file():
         pytest.skip("generated VSIX has not been staged")
 

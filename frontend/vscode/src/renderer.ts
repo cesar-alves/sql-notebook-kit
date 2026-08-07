@@ -1,10 +1,10 @@
-import { installTableCopy, type BridgeMessage } from '@redshift-notebooks/protocol';
+import { installTableCopy, type BridgeMessage } from '@sql-notebook-kit/protocol';
 import type {
   ActivationFunction, OutputItem, RendererApi, RendererContext
 } from 'vscode-notebook-renderer';
 
 type ThemeKind = 'light' | 'dark' | 'high_contrast';
-const BRIDGE_MIME = 'application/vnd.redshift-notebooks.bridge+json';
+const BRIDGE_MIME = 'application/vnd.sql-notebook-kit.bridge+json';
 const ERROR_MIME = 'application/vnd.code.notebook.error';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -146,9 +146,9 @@ function renderError(
 ): void {
   const { name, message, traceback } = payload;
   element.replaceChildren();
-  element.className = 'rn-sql-error';
+  element.className = 'snk-sql-error';
   const summary = document.createElement('div');
-  summary.className = 'rn-sql-error-summary';
+  summary.className = 'snk-sql-error-summary';
   summary.setAttribute('role', 'alert');
   summary.textContent = message || 'The SQL statement could not be executed.';
   const details = document.createElement('details');
@@ -166,10 +166,10 @@ function safeFilename(value: string): string {
 }
 
 function status(root: Element, message: string, error = false): void {
-  const target = root.querySelector<HTMLElement>('.rn-export-status');
+  const target = root.querySelector<HTMLElement>('.snk-export-status');
   if (!target) return;
   target.textContent = message;
-  target.classList.toggle('rn-error', error);
+  target.classList.toggle('snk-error', error);
 }
 
 function base64FromDataUrl(value: string): string {
@@ -182,14 +182,14 @@ function base64FromDataUrl(value: string): string {
 export const activate = ((context: RendererContext<unknown>): RendererApi => {
   const stylesheet = document.createElement('style');
   stylesheet.textContent = `
-    .rn-sql-error {
+    .snk-sql-error {
       color: var(--vscode-editor-foreground); background: var(--vscode-editor-background);
       border-left: 3px solid var(--vscode-errorForeground); padding: 8px 12px;
     }
-    .rn-sql-error-summary { color: var(--vscode-errorForeground); font-weight: 600; }
-    .rn-sql-error details { margin-top: 6px; }
-    .rn-sql-error summary { cursor: pointer; color: var(--vscode-editor-foreground); }
-    .rn-sql-error pre {
+    .snk-sql-error-summary { color: var(--vscode-errorForeground); font-weight: 600; }
+    .snk-sql-error details { margin-top: 6px; }
+    .snk-sql-error summary { cursor: pointer; color: var(--vscode-editor-foreground); }
+    .snk-sql-error pre {
       color: var(--vscode-editor-foreground); background: var(--vscode-textCodeBlock-background);
       border: 1px solid var(--vscode-widget-border); margin: 8px 0 0;
       max-height: 24rem; overflow: auto; padding: 8px; white-space: pre-wrap;
@@ -222,8 +222,8 @@ export const activate = ((context: RendererContext<unknown>): RendererApi => {
   });
   const exportListener = async (event: Event) => {
     const target = event.target instanceof Element ? event.target : null;
-    const button = target?.closest('.rn-export-button');
-    const root = button?.closest('.rn-viz-workspace');
+    const button = target?.closest('.snk-export-button');
+    const root = button?.closest('.snk-viz-workspace');
     if (!button || !root) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -246,7 +246,7 @@ export const activate = ((context: RendererContext<unknown>): RendererApi => {
       }
       return;
     }
-    const selected = root.querySelector<HTMLElement>('.rn-tabs button[aria-pressed="true"]');
+    const selected = root.querySelector<HTMLElement>('.snk-tabs button[aria-pressed="true"]');
     const filename = safeFilename(selected?.textContent ?? 'visualization');
     const requestId = crypto.randomUUID();
     try {

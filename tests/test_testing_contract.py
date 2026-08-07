@@ -2,8 +2,8 @@ import sqlite3
 
 import pytest
 
-from redshift_notebooks.errors import NotebookConnectionError
-from redshift_notebooks.testing import run_factory_contract
+from sql_notebook_kit.errors import NotebookConnectionError
+from sql_notebook_kit.testing import run_factory_contract
 
 
 def test_contract_runner_validates_live_factory():

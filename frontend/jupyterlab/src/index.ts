@@ -5,7 +5,7 @@ import { INotebookTracker, type NotebookPanel } from '@jupyterlab/notebook';
 import { IRenderMimeRegistry, RenderedError } from '@jupyterlab/rendermime';
 import type { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import type { KernelMessage } from '@jupyterlab/services';
-import { PostgreSQL, SQLDialect, sql } from '@codemirror/lang-sql';
+import { StandardSQL, sql } from '@codemirror/lang-sql';
 import { Widget } from '@lumino/widgets';
 import { isManagedSql, safeFilename, writeClipboardText } from './helpers.js';
 import {
@@ -19,24 +19,13 @@ import {
   installTableCopy,
   type BridgeMessage,
   type Collection
-} from '@redshift-notebooks/protocol';
+} from '@sql-notebook-kit/protocol';
 import '../style/index.css';
 
 const activeComms = new Map<any, { cellId: string; sessionId: string }>();
 let currentTheme: 'light' | 'dark' | 'high_contrast' = 'light';
 let themeTimer: number | undefined;
-const SQL_MIME = 'text/x-redshift-sql';
-const REDSHIFT_WORDS = [
-  'analyze compression copy deep distkey diststyle encode interleaved qualify raw',
-  'sortkey unload vacuum az64 bytedict mostly8 mostly16 mostly32 zstd'
-].join(' ');
-
-const redshiftDialect = SQLDialect.define({
-  ...PostgreSQL.spec,
-  keywords: `${PostgreSQL.spec.keywords ?? ''} ${REDSHIFT_WORDS}`,
-  builtin: `${PostgreSQL.spec.builtin ?? ''} dateadd datediff date_part decode listagg nvl`,
-  types: `${PostgreSQL.spec.types ?? ''} super varbyte geometry geography`
-});
+const SQL_MIME = 'text/x-sql-notebook-kit';
 
 interface PlotlyElement extends HTMLElement {
   _fullLayout?: { width?: number; height?: number };
@@ -72,10 +61,10 @@ function attachSqlHighlighting(panel: NotebookPanel): void {
 }
 
 function exportStatus(root: Element, message: string, error = false): void {
-  const target = root.querySelector<HTMLElement>('.rn-export-status');
+  const target = root.querySelector<HTMLElement>('.snk-export-status');
   if (!target) return;
   target.textContent = message;
-  target.classList.toggle('rn-error', error);
+  target.classList.toggle('snk-error', error);
 }
 
 function dataUrlBlob(value: string): Promise<Blob> {
@@ -110,7 +99,7 @@ async function exportPlot(root: Element): Promise<void> {
     }
     return;
   }
-  const selected = root.querySelector<HTMLElement>('.rn-tabs button[aria-pressed="true"]');
+  const selected = root.querySelector<HTMLElement>('.snk-tabs button[aria-pressed="true"]');
   const filename = safeFilename(selected?.textContent ?? 'visualization');
   const width = Math.max(1, plot?._fullLayout?.width ?? plot?.clientWidth ?? 1);
   const height = Math.max(1, plot?._fullLayout?.height ?? plot?.clientHeight ?? 1);
@@ -156,8 +145,8 @@ async function exportPlot(root: Element): Promise<void> {
 function installExportHandler(): void {
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target : null;
-    const button = target?.closest('.rn-export-button');
-    const root = button?.closest('.rn-viz-workspace');
+    const button = target?.closest('.snk-export-button');
+    const root = button?.closest('.snk-viz-workspace');
     if (!button || !root) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -178,9 +167,9 @@ class SQLExecutionErrorRenderer extends Widget implements IRenderMime.IRenderer 
     const traceback = Array.isArray(payload?.traceback) ? payload.traceback.join('\n') : '';
     this.node.replaceChildren();
     if (payload?.ename === 'SQLExecutionError') {
-      this.addClass('rn-sql-error');
+      this.addClass('snk-sql-error');
       const summary = document.createElement('div');
-      summary.className = 'rn-sql-error-summary';
+      summary.className = 'snk-sql-error-summary';
       summary.setAttribute('role', 'alert');
       summary.textContent = payload.evalue || 'The SQL statement could not be executed.';
       const details = document.createElement('details');
@@ -343,7 +332,7 @@ function attach(panel: NotebookPanel): void {
 }
 
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: '@redshift-notebooks/jupyterlab:plugin',
+  id: '@sql-notebook-kit/jupyterlab:plugin',
   autoStart: true,
   requires: [INotebookTracker, IThemeManager, IEditorLanguageRegistry, IRenderMimeRegistry],
   activate: (
@@ -354,11 +343,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
     rendermime: IRenderMimeRegistry
   ) => {
     const language: IEditorLanguage = {
-      name: 'Redshift SQL',
-      alias: ['redshift', 'redshift-sql'],
+      name: 'SQL Notebook Kit',
+      alias: ['sql-notebook-kit', 'notebook-sql'],
       mime: SQL_MIME,
       extensions: ['sql'],
-      support: sql({ dialect: redshiftDialect }) as unknown as IEditorLanguage['support']
+      support: sql({ dialect: StandardSQL }) as unknown as IEditorLanguage['support']
     };
     languages.addLanguage(language);
     rendermime.addFactory({
@@ -376,10 +365,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
         : themes.theme?.toLowerCase().includes('dark')
           ? 'dark'
           : 'light';
-      document.querySelectorAll('.rn-viz-workspace').forEach(root => {
-        root.classList.toggle('rn-theme-dark', currentTheme === 'dark');
-        root.classList.toggle('rn-theme-light', currentTheme === 'light');
-        root.classList.toggle('rn-theme-high-contrast', currentTheme === 'high_contrast');
+      document.querySelectorAll('.snk-viz-workspace').forEach(root => {
+        root.classList.toggle('snk-theme-dark', currentTheme === 'dark');
+        root.classList.toggle('snk-theme-light', currentTheme === 'light');
+        root.classList.toggle('snk-theme-high-contrast', currentTheme === 'high_contrast');
       });
       broadcastTheme();
     };

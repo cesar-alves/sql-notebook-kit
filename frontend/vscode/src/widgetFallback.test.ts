@@ -43,7 +43,7 @@ describe('saved visualization widget fallback', () => {
     await base.renderOutputItem(output(), element, new AbortController().signal);
 
     expect(original).not.toHaveBeenCalled();
-    expect(element.querySelector('.rn-widget-placeholder')?.textContent)
+    expect(element.querySelector('.snk-widget-placeholder')?.textContent)
       .toContain('Run this SQL cell');
   });
 

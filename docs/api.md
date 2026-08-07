@@ -2,31 +2,39 @@
 
 ## Public package
 
-::: redshift_notebooks
+::: sql_notebook_kit
     options:
       members: true
 
 ## Factory contracts
 
-::: redshift_notebooks.connectors
+::: sql_notebook_kit.connectors
     options:
       members: true
 
+## Backend capabilities
+
+::: sql_notebook_kit.adapters.base
+    options:
+      members:
+        - BackendCapabilities
+        - BackendAdapter
+
 ## Sessions
 
-::: redshift_notebooks.session
+::: sql_notebook_kit.session
     options:
       members: true
 
 ## Lazy transformations
 
-::: redshift_notebooks.lazy
+::: sql_notebook_kit.lazy
     options:
       members: true
 
 ## Profiles
 
-::: redshift_notebooks.adapters.config
+::: sql_notebook_kit.adapters.config
     options:
       members:
         - load_profile
@@ -34,22 +42,22 @@
 
 ## SSO reference factories
 
-::: redshift_notebooks.adapters.redshift
+::: sql_notebook_kit.adapters.redshift
     options:
       members: true
 
 ## Results and charts
 
-::: redshift_notebooks.results
+::: sql_notebook_kit.results
     options:
       members: true
 
-::: redshift_notebooks.visualize
+::: sql_notebook_kit.visualize
     options:
       members: true
 
 ## Factory testing
 
-::: redshift_notebooks.testing
+::: sql_notebook_kit.testing
     options:
       members: true

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "SQL Notebook Kit magics",
+  "scopeName": "sql-notebook-kit.sql-magic",
+  "injectionSelector": "L:source.python",
+  "patterns": [
+    {
+      "begin": "^(\\s*)(%%sql)(?=\\s|$)",
+      "beginCaptures": { "2": { "name": "keyword.control.magic.sql" } },
+      "end": "\\z",
+      "contentName": "meta.embedded.block.sql",
+      "patterns": [{ "include": "source.sql" }]
+    },
+    {
+      "begin": "^(\\s*)(%sql)\\s*$",
+      "beginCaptures": { "2": { "name": "keyword.control.magic.sql" } },
+      "end": "\\z",
+      "contentName": "meta.embedded.block.sql",
+      "patterns": [{ "include": "source.sql" }]
+    },
+    {
+      "begin": "^(\\s*)(%sql)(?=\\s+)",
+      "beginCaptures": { "2": { "name": "keyword.control.magic.sql" } },
+      "end": "$",
+      "contentName": "meta.embedded.inline.sql",
+      "patterns": [{ "include": "source.sql" }]
+    }
+  ]
+}

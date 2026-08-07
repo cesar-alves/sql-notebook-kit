@@ -1,7 +1,7 @@
 {
-  "name": "@redshift-notebooks/jupyterlab",
+  "name": "@sql-notebook-kit/jupyterlab",
   "version": "0.1.0",
-  "description": "JupyterLab metadata and theme companion for redshift-notebooks",
+  "description": "JupyterLab metadata and theme companion for sql-notebook-kit",
   "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
@@ -21,7 +21,7 @@
     "@jupyterlab/services": "^7.4.0",
     "@codemirror/lang-sql": "^6.10.0",
     "@lumino/widgets": "^2.6.0",
-    "@redshift-notebooks/protocol": "workspace:*"
+    "@sql-notebook-kit/protocol": "workspace:*"
   },
   "devDependencies": {
     "@jupyter/builder": "^1.2.1",
@@ -32,6 +32,6 @@
   },
   "jupyterlab": {
     "extension": true,
-    "outputDir": "../../redshift_notebooks/labextension"
+    "outputDir": "../../sql_notebook_kit/labextension"
   }
 }

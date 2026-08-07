@@ -2,7 +2,7 @@
 
 This page is the normative compatibility contract for custom connection
 factories. **MUST**, **MUST NOT**, and **SHOULD** describe requirements for a
-factory that is safe to use with `redshift-notebooks`.
+factory that is safe to use with `sql-notebook-kit`.
 
 ## Callable signature
 
@@ -83,7 +83,7 @@ import os
 import pytest
 
 from <company-package>.<connection-module> import <sso-factory>
-from redshift_notebooks.testing import run_factory_contract
+from sql_notebook_kit.testing import run_factory_contract
 
 
 @pytest.mark.skipif(

@@ -22,11 +22,11 @@ pnpm package:vscode
 Then install it into the active VS Code extension host:
 
 ```bash
-redshift-notebooks vscode install
-redshift-notebooks vscode status
+sql-notebook-kit vscode install
+sql-notebook-kit vscode status
 ```
 
-Use `redshift-notebooks vscode path` for offline/manual installation. The
+Use `sql-notebook-kit vscode path` for offline/manual installation. The
 installer supports `code`, `code-insiders`, and `codium`, plus `--cli` for a
 compatible custom command. Run it in the matching remote terminal for SSH,
 WSL, or dev-container windows, then reload the window. Microsoft Jupyter is a
@@ -87,7 +87,7 @@ Specifications retain both a display label and positional column index, so
 duplicate and non-string DataFrame columns remain unambiguous.
 
 ```python
-from redshift_notebooks.visualize import FieldBinding, FilterSpec, VisualizationSpec
+from sql_notebook_kit.visualize import FieldBinding, FilterSpec, VisualizationSpec
 
 spec = VisualizationSpec.create(
     "Revenue by region",
@@ -114,7 +114,7 @@ are rejected before rendering.
 ## Persistence capability
 
 Applied state is stored under
-`metadata.redshift_notebooks.visualizations` on the originating SQL cell. It
+`metadata.sql_notebook_kit.visualizations` on the originating SQL cell. It
 contains specifications only—never result rows, Plotly figures, credentials,
 drafts, or presentation theme state.
 
@@ -171,7 +171,7 @@ scripts/run_visualization_lab.sh
 ```
 
 The command starts Voilà on `http://localhost:8866`. Set
-`REDSHIFT_NOTEBOOKS_LAB_PORT` when that port is already in use. Refreshing the
+`SQL_NOTEBOOK_KIT_LAB_PORT` when that port is already in use. Refreshing the
 page starts a fresh kernel, so current Python and `workspace.css` changes are
 loaded immediately.
 

@@ -6,4 +6,4 @@ cd "$project_dir"
 
 exec uv run --group gui voila dev/visualization_lab.ipynb \
   --no-browser \
-  --port="${REDSHIFT_NOTEBOOKS_LAB_PORT:-8866}"
+  --port="${SQL_NOTEBOOK_KIT_LAB_PORT:-8866}"
