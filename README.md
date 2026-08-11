@@ -174,9 +174,11 @@ pnpm build && pnpm package:vscode
 uv build
 ```
 
-The staged VSIX is generated and ignored by Git. Python distribution builds
-fail with an actionable message when it is absent, ensuring published wheels
-and source distributions always contain the matching VS Code companion.
+The staged VSIX is generated and ignored by Git. When it is absent, Python
+distribution and editable builds run the three pnpm commands above from this
+package directory automatically. Git and path installs therefore require
+Node.js and pnpm, while published wheels and source distributions reuse their
+bundled VSIX and install without a frontend toolchain.
 
 To iterate on the visualization controls without rebuilding or reinstalling the
 VS Code extension, launch the interactive design lab and open the printed local
