@@ -306,20 +306,22 @@ class VisualizationWorkspace:
                     f"{counts.get('filtered', 0):,} filtered → "
                     f"{counts.get('plotted', 0):,} plotted rows"
                 )
-                display(self.widgets.HTML(f'<div role="status">{count_text}</div>'))
+                children = [self.widgets.HTML(f'<div role="status">{count_text}</div>')]
                 if spec.chart_type == "table":
-                    display(
+                    children.append(
                         self.widgets.HTML(
                             _table_html(copy_frame, label=f"{spec.name} table")
                         )
                     )
                 else:
-                    display(self.widgets.HTML(_copy_payload(copy_frame)))
-                    display(
-                        build_figure(
-                            self.result.dataframe, spec, self.theme, _prepared=prepared
-                        )
+                    figure_output = self.widgets.Output()
+                    figure_output.append_display_data(
+                        build_figure(self.result.dataframe, spec, self.theme, _prepared=prepared)
                     )
+                    children.extend(
+                        [self.widgets.HTML(_copy_payload(copy_frame)), figure_output]
+                    )
+                display(self.widgets.VBox(children))
             except VisualizationError as exc:
                 display(
                     self.widgets.HTML(
