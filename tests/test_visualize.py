@@ -87,6 +87,35 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
     assert workspace.export_button.layout.display == "none"
 
 
+def test_workspace_composes_active_chart_into_one_top_level_display(monkeypatch):
+    displayed = []
+    monkeypatch.setattr(
+        "IPython.display.display", lambda value, *_args, **_kwargs: displayed.append(value)
+    )
+    result = NotebookResult(
+        pd.DataFrame({"category": ["alpha", "beta"], "amount": [1, 2]}), raw=None
+    )
+    workspace = VisualizationWorkspace(result)
+    displayed.clear()
+    chart = spec(
+        "bar",
+        (binding("x", "category", 0), binding("y", "amount", 1)),
+    )
+    result.visualizations.add(chart, persist=False)
+
+    workspace._show_active()
+
+    assert len(displayed) == 1
+    composed = displayed[0]
+    assert isinstance(composed, workspace.widgets.VBox)
+    assert len(composed.children) == 3
+    assert "2 source → 2 filtered → 2 plotted rows" in composed.children[0].value
+    assert "snk-copy-payload" in composed.children[1].value
+    assert isinstance(composed.children[2], workspace.widgets.Output)
+    assert len(composed.children[2].outputs) == 1
+    assert composed.children[2].outputs[0]["output_type"] == "display_data"
+
+
 def test_copy_frame_uses_prepared_render_fields_and_display_labels():
     frame = pd.DataFrame(
         {

@@ -4,12 +4,14 @@ import { BRIDGE_MIME, WIDGET_MIME, managedWidgetCell } from './widgetState.js';
 
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 const cell = (
-  metadata: Record<string, unknown>, mimes: Array<{ mime: string; value?: unknown }>
+  metadata: Record<string, unknown>, mimes: Array<{ mime: string; value?: unknown }>,
+  outputMetadata?: Record<string, unknown>
 ) => ({
   document: { uri: { toString: () => 'vscode-notebook-cell:/example#1' } },
   metadata,
   outputs: [{
-    items: mimes.map(item => ({ mime: item.mime, data: bytes(item.value ?? {}) }))
+    items: mimes.map(item => ({ mime: item.mime, data: bytes(item.value ?? {}) })),
+    metadata: outputMetadata
   }]
 });
 
@@ -33,7 +35,17 @@ describe('saved widget ownership', () => {
       { mime: BRIDGE_MIME }
     ])], 'owned');
     expect(match).toEqual({
-      cellId: 'vscode-notebook-cell:/example#1', managed: true
+      cellId: 'vscode-notebook-cell:/example#1', managed: true, live: false
+    });
+  });
+
+  it('recognizes a transient bridge output as live before the host session handshake', () => {
+    const match = managedWidgetCell([cell({}, [
+      { mime: WIDGET_MIME, value: { model_id: 'owned' } },
+      { mime: BRIDGE_MIME }
+    ], { transient: { display_id: 'sql-notebook-kit-session' } })], 'owned');
+    expect(match).toEqual({
+      cellId: 'vscode-notebook-cell:/example#1', managed: true, live: true
     });
   });
 

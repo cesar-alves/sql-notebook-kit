@@ -11,7 +11,20 @@ interface OutputItemLike {
 interface CellLike {
   document: { uri: { toString(): string } };
   metadata: Record<string, unknown>;
-  outputs: readonly { items: readonly OutputItemLike[] }[];
+  outputs: readonly {
+    items: readonly OutputItemLike[];
+    metadata?: Record<string, unknown>;
+  }[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isLiveBridge(output: CellLike['outputs'][number]): boolean {
+  if (!output.items.some(item => item.mime === BRIDGE_MIME)) return false;
+  const transient = output.metadata?.transient;
+  return isRecord(transient) && typeof transient.display_id === 'string';
 }
 
 function modelId(item: OutputItemLike): string | undefined {
@@ -26,14 +39,15 @@ function modelId(item: OutputItemLike): string | undefined {
 
 export function managedWidgetCell(
   cells: readonly CellLike[], model: string
-): { cellId: string; managed: boolean } | undefined {
+): { cellId: string; managed: boolean; live: boolean } | undefined {
   for (const cell of cells) {
     const items = cell.outputs.flatMap(output => [...output.items]);
     if (!items.some(item => modelId(item) === model)) continue;
     return {
       cellId: cell.document.uri.toString(),
       managed: hasVisualizationMetadata(cell.metadata) ||
-        items.some(item => item.mime === BRIDGE_MIME)
+        items.some(item => item.mime === BRIDGE_MIME),
+      live: cell.outputs.some(isLiveBridge)
     };
   }
   return undefined;

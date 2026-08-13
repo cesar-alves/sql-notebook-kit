@@ -335,7 +335,7 @@ async function handleWidgetState(
   const request = event.message;
   const notebook = event.editor.notebook;
   const match = managedWidgetCell(notebook.getCells(), request.modelId);
-  const live = !!match && sessions.has(keyFor(notebook, match.cellId));
+  const live = !!match && (match.live || sessions.has(keyFor(notebook, match.cellId)));
   await channel.postMessage({
     kind: 'widget_state_result',
     requestId: request.requestId,
