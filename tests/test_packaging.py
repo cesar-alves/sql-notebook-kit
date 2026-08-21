@@ -8,6 +8,12 @@ import pytest
 ROOT = Path(__file__).parents[1]
 
 
+def test_core_dependencies_include_jupysql_toml_support():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+
+    assert "toml>=0.10.2,<1" in project["dependencies"]
+
+
 def test_visualization_extras_declare_nbformat():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     extras = project["optional-dependencies"]

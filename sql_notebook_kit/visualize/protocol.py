@@ -141,6 +141,7 @@ class VscodePersistenceBridge(_ThemeSupport):
 
     deferred = True
     available = False
+    frontend_manages_theme = True
 
     def __init__(self, cell_id: str) -> None:
         self.cell_id = cell_id

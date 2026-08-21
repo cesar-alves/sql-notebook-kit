@@ -93,6 +93,7 @@ class NotebookResult:
     def _ipython_display_(self) -> None:
         from IPython.display import HTML, display
 
+        self._attach_notebook_context()
         if self.visualization_enabled:
             try:
                 display(self.visualize())
@@ -100,3 +101,27 @@ class NotebookResult:
             except MissingOptionalDependencyError:
                 pass
         display(HTML(self._repr_html_()))
+
+    def _attach_notebook_context(self) -> None:
+        """Attach the executing cell context to results collected from Python."""
+        if self.cell_id is not None:
+            return
+        try:
+            from IPython import get_ipython
+
+            shell = get_ipython()
+            parent: Any = shell.get_parent() if shell is not None else {}
+        except Exception:
+            return
+        metadata = parent.get("metadata", {}) if isinstance(parent, dict) else {}
+        cell_id = metadata.get("cellId") or metadata.get("cell_id")
+        if not isinstance(cell_id, str) or not cell_id:
+            return
+        self.cell_id = cell_id
+        namespace = metadata.get("sql_notebook_kit")
+        if not isinstance(namespace, dict) or "visualizations" not in namespace:
+            namespace = metadata.get("redshift_notebooks")
+        if self.visualization_metadata is None and isinstance(namespace, dict):
+            stored = namespace.get("visualizations")
+            if isinstance(stored, dict):
+                self.visualization_metadata = stored

@@ -103,7 +103,7 @@ def _table_html(frame: Any, *, label: str) -> str:
             )
         rows.append("<tr>" + "".join(cells) + "</tr>")
     return (
-        f'<div class="snk-table-wrap snk-copy-table"><table role="grid" '
+        f'<div class="snk-table-wrap snk-copy-table"><table class="snk-result-table" role="grid" '
         f'aria-label="{html.escape(label)}"><thead><tr>{headers}</tr></thead>'
         f'<tbody>{"".join(rows)}</tbody></table></div>'
     )
@@ -214,7 +214,8 @@ class VisualizationWorkspace:
         self.tab_strip.add_class("snk-tab-strip")
         self.toolbar = widgets.HBox([self.tab_strip, self.context_actions])
         self.toolbar.add_class("snk-workspace-toolbar")
-        self.output = widgets.Output()
+        self.output = widgets.VBox()
+        self.output.add_class("snk-active-output")
         self.status = widgets.HTML('<div role="status" aria-live="polite"></div>')
         self.export_status = widgets.HTML(
             '<div class="snk-export-status" role="status" aria-live="polite"></div>'
@@ -237,7 +238,7 @@ class VisualizationWorkspace:
             ]
         )
         self.root.add_class("snk-viz-workspace")
-        self.root.add_class("snk-theme-light")
+        self.root.add_class(f"snk-theme-{self.theme.kind.replace('_', '-')}")
         self._refresh_tabs()
         self._show_active()
 
@@ -281,54 +282,50 @@ class VisualizationWorkspace:
         self._show_active()
 
     def _show_active(self) -> None:
-        from IPython.display import display
-
         self._update_context_actions()
-        with self.output:
-            self.output.clear_output(wait=True)
-            if self.manager.collection.active_id is None:
-                display(
+        if self.manager.collection.active_id is None:
+            self.output.children = (
+                self.widgets.HTML(
+                    _table_html(self.result.dataframe, label="Query result table")
+                ),
+            )
+            return
+        spec = self.manager.get(self.manager.collection.active_id)
+        try:
+            copy_frame, prepared = _copy_frame(self.result.dataframe, spec)
+            counts = {
+                "source": prepared.source_rows,
+                "filtered": prepared.filtered_rows,
+                "plotted": prepared.plotted_rows,
+            }
+            count_text = (
+                f"{counts.get('source', 0):,} source → "
+                f"{counts.get('filtered', 0):,} filtered → "
+                f"{counts.get('plotted', 0):,} plotted rows"
+            )
+            children = [self.widgets.HTML(f'<div role="status">{count_text}</div>')]
+            if spec.chart_type == "table":
+                children.append(
                     self.widgets.HTML(
-                        _table_html(self.result.dataframe, label="Query result table")
+                        _table_html(copy_frame, label=f"{spec.name} table")
                     )
                 )
-                return
-            spec = self.manager.get(self.manager.collection.active_id)
-            try:
-                copy_frame, prepared = _copy_frame(self.result.dataframe, spec)
-                counts = {
-                    "source": prepared.source_rows,
-                    "filtered": prepared.filtered_rows,
-                    "plotted": prepared.plotted_rows,
-                }
-                count_text = (
-                    f"{counts.get('source', 0):,} source → "
-                    f"{counts.get('filtered', 0):,} filtered → "
-                    f"{counts.get('plotted', 0):,} plotted rows"
+            else:
+                figure_output = self.widgets.Output()
+                figure_output.append_display_data(
+                    build_figure(self.result.dataframe, spec, self.theme, _prepared=prepared)
                 )
-                children = [self.widgets.HTML(f'<div role="status">{count_text}</div>')]
-                if spec.chart_type == "table":
-                    children.append(
-                        self.widgets.HTML(
-                            _table_html(copy_frame, label=f"{spec.name} table")
-                        )
-                    )
-                else:
-                    figure_output = self.widgets.Output()
-                    figure_output.append_display_data(
-                        build_figure(self.result.dataframe, spec, self.theme, _prepared=prepared)
-                    )
-                    children.extend(
-                        [self.widgets.HTML(_copy_payload(copy_frame)), figure_output]
-                    )
-                display(self.widgets.VBox(children))
-            except VisualizationError as exc:
-                display(
-                    self.widgets.HTML(
-                        '<div class="snk-error" role="alert">⚠ Needs attention: '
-                        f"{html.escape(str(exc))}</div>"
-                    )
+                children.extend(
+                    [self.widgets.HTML(_copy_payload(copy_frame)), figure_output]
                 )
+            self.output.children = tuple(children)
+        except VisualizationError as exc:
+            self.output.children = (
+                self.widgets.HTML(
+                    '<div class="snk-error" role="alert">⚠ Needs attention: '
+                    f"{html.escape(str(exc))}</div>"
+                ),
+            )
 
     def _next_name(self) -> str:
         existing = {item.name for item in self.manager.list()}
@@ -669,6 +666,12 @@ class VisualizationWorkspace:
         for class_name in ("snk-theme-light", "snk-theme-dark", "snk-theme-high-contrast"):
             self.root.remove_class(class_name)
         self.root.add_class(f"snk-theme-{theme.kind.replace('_', '-')}")
+        if self.manager.frontend_manages_theme:
+            # VS Code delivers bridge responses through a silent kernel execution.
+            # Rebuilding Output here emits clear_output/display_data messages that
+            # VS Code intentionally discards, leaving an otherwise live widget blank.
+            # Its renderer applies the same tokens directly to the workspace DOM.
+            return
         if self._draft is not None and hasattr(self, "preview"):
             self._schedule_preview()
         else:

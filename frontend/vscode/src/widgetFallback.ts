@@ -1,6 +1,7 @@
 import type {
   ActivationFunction, OutputItem, RendererApi, RendererContext
 } from 'vscode-notebook-renderer';
+import { applyWorkspaceTheme, resolveVsCodeTheme } from './theme.js';
 
 const BASE_RENDERER = 'jupyter-ipywidget-renderer';
 const INSTALLED = 'redshiftNotebooksWidgetFallbackInstalled';
@@ -78,7 +79,63 @@ async function classify(
 export const activate = (async (context: RendererContext<unknown>) => {
   const base = await context.getRenderer(BASE_RENDERER);
   if (!base || base[INSTALLED]) return undefined;
+  const stylesheet = document.createElement('style');
+  stylesheet.textContent = `
+    .snk-managed-widget-output,
+    .cell-output-ipywidget-background:has(.snk-viz-workspace) {
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+    }
+  `;
+  document.head.appendChild(stylesheet);
   const render = base.renderOutputItem.bind(base);
+  const dispose = base.disposeOutputItem?.bind(base);
+  const forcedColors = matchMedia('(forced-colors: active)');
+  const managed = new Map<string, { element: HTMLElement; observer: MutationObserver }>();
+
+  const applyTheme = (element: HTMLElement) => {
+    const theme = resolveVsCodeTheme(forcedColors.matches);
+    element.classList.add('snk-managed-widget-output');
+    // VS Code's built-in ipywidgets renderer forces this element to white with
+    // an !important rule, including in dark themes.
+    element.style.setProperty('background-color', 'transparent', 'important');
+    element.style.setProperty('border', '0', 'important');
+    element.style.setProperty('outline', '0', 'important');
+    element.style.setProperty('box-shadow', 'none', 'important');
+    element.style.color = theme.tokens.text;
+    element.style.colorScheme = theme.kind === 'light' ? 'light' : 'dark';
+    element.querySelectorAll<HTMLElement>('.snk-viz-workspace')
+      .forEach(root => applyWorkspaceTheme(root, theme));
+  };
+  const refresh = () => managed.forEach(({ element }) => applyTheme(element));
+  const themeObserver = new MutationObserver(refresh);
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
+  forcedColors.addEventListener('change', refresh);
+
+  const unregister = (outputId: string) => {
+    const entry = managed.get(outputId);
+    entry?.observer.disconnect();
+    if (entry) {
+      entry.element.classList.remove('snk-managed-widget-output');
+      entry.element.style.removeProperty('background-color');
+      entry.element.style.removeProperty('border');
+      entry.element.style.removeProperty('outline');
+      entry.element.style.removeProperty('box-shadow');
+      entry.element.style.removeProperty('color');
+      entry.element.style.removeProperty('color-scheme');
+    }
+    managed.delete(outputId);
+  };
+  const register = (outputId: string, element: HTMLElement) => {
+    unregister(outputId);
+    applyTheme(element);
+    const observer = new MutationObserver(() => applyTheme(element));
+    observer.observe(element, { childList: true, subtree: true });
+    managed.set(outputId, { element, observer });
+  };
+
   base[INSTALLED] = true;
   base.renderOutputItem = async (
     output: OutputItem, element: HTMLElement, signal: AbortSignal
@@ -87,9 +144,23 @@ export const activate = (async (context: RendererContext<unknown>) => {
     if (signal.aborted) return;
     if (state?.managed && !state.live) {
       renderPlaceholder(element);
+      register(output.id, element);
       return;
     }
     await render(output, element, signal);
+    if (state?.managed || element.querySelector('.snk-viz-workspace')) {
+      register(output.id, element);
+    }
+  };
+  base.disposeOutputItem = (outputId?: string) => {
+    if (outputId) unregister(outputId);
+    else {
+      for (const id of [...managed.keys()]) unregister(id);
+      themeObserver.disconnect();
+      forcedColors.removeEventListener('change', refresh);
+      stylesheet.remove();
+    }
+    dispose?.(outputId);
   };
   return undefined;
 }) satisfies ActivationFunction;

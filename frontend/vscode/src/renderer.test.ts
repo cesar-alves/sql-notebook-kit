@@ -124,6 +124,8 @@ describe('VS Code bridge renderer', () => {
     document.body.className = 'vscode-light';
     document.body.style.setProperty('--vscode-editor-background', '#123456');
     document.body.style.setProperty('--vscode-editor-foreground', '#abcdef');
+    document.body.style.setProperty('--vscode-panel-border', '#334455');
+    document.body.style.setProperty('--vscode-widget-border', '#ffffff');
     media.matches = true;
     const messages: BridgeMessage[] = [];
     const renderer = activate({
@@ -135,7 +137,7 @@ describe('VS Code bridge renderer', () => {
 
     expect(messages[1].payload).toMatchObject({
       kind: 'high_contrast',
-      tokens: { background: '#123456', text: '#abcdef' }
+      tokens: { background: '#123456', text: '#abcdef', border: '#334455' }
     });
     renderer.disposeOutputItem?.();
   });

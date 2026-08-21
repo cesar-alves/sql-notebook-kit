@@ -41,12 +41,31 @@ not supported, and the Microsoft Jupyter extension is required.
 
 ## DuckDB quickstart
 
+Set `DUCK_DB_SOURCE` to an existing DuckDB database, install the DuckDB and
+visualization extras in your notebook environment, and open the read-only
+[DuckDB sample notebook](examples/duckdb.ipynb):
+
+```bash
+uv pip install -e '.[duckdb,viz]'
+export DUCK_DB_SOURCE=/absolute/path/to/analytics.duckdb
+jupyter lab examples/duckdb.ipynb
+```
+
+The sample validates the connection, lists database tables, and exercises both
+SQL cells and bounded lazy collection without modifying the source database.
+For direct setup in another notebook, use the same environment variable:
+
 ```python
+import os
+
 from sql_notebook_kit import create_session
 
 session = create_session(
     backend="duckdb",
-    connection_kwargs={"database": "analytics.duckdb"},
+    connection_kwargs={
+        "database": os.environ["DUCK_DB_SOURCE"],
+        "read_only": True,
+    },
 )
 session.register(visualization=True)
 ```

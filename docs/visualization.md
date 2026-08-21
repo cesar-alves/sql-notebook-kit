@@ -162,6 +162,11 @@ focus, programmatic labels, live validation status, and a responsive layout for
 the expandable Options section use the active theme's input, surface, text,
 border, selection, and focus colors.
 
+The VS Code companion also themes the host-owned padding around a recognized SQL
+Notebook Kit workspace. In both frontends, result-table grids remain visible
+using the active theme's subtle border color, but generic Jupyter table frames
+and unrelated ipywidget outputs are not restyled.
+
 ## Visual design lab
 
 Use the development lab to work on the real visualization controls without
