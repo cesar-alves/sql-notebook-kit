@@ -308,7 +308,13 @@ def register_session(
 
     variable = f"_sql_notebook_kit_engine_{id(session):x}"
     ipython.push({variable: session.engine})
-    ipython.extension_manager.load_extension("sql")
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*invalid escape sequence.*",
+            category=SyntaxWarning,
+        )
+        ipython.extension_manager.load_extension("sql")
     line = f"--alias {alias} {variable}" if alias else variable
     ipython.run_line_magic("sql", line)
 
