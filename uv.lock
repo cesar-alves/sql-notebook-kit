@@ -2859,7 +2859,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -3755,8 +3755,10 @@ name = "sql-notebook-kit"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ipykernel" },
     { name = "ipython" },
     { name = "jupysql" },
+    { name = "jupyter-client" },
     { name = "sqlalchemy" },
     { name = "toml" },
 ]
@@ -3837,7 +3839,6 @@ frontend = [
     { name = "jupyterlab" },
 ]
 gui = [
-    { name = "ipykernel" },
     { name = "voila" },
 ]
 
@@ -3855,10 +3856,12 @@ requires-dist = [
     { name = "google-cloud-bigquery", extras = ["pandas"], marker = "extra == 'bigquery'", specifier = ">=3,<4" },
     { name = "google-cloud-bigquery-storage", marker = "extra == 'all'", specifier = ">=2,<3" },
     { name = "google-cloud-bigquery-storage", marker = "extra == 'bigquery'", specifier = ">=2,<3" },
+    { name = "ipykernel", specifier = ">=6,<8" },
     { name = "ipython", specifier = ">=8,<10" },
     { name = "ipywidgets", marker = "extra == 'all'", specifier = ">=8,<9" },
     { name = "ipywidgets", marker = "extra == 'viz'", specifier = ">=8,<9" },
     { name = "jupysql", specifier = ">=0.11,<0.12" },
+    { name = "jupyter-client", specifier = ">=8,<9" },
     { name = "nbformat", marker = "extra == 'all'", specifier = ">=5.10,<6" },
     { name = "nbformat", marker = "extra == 'viz'", specifier = ">=5.10,<6" },
     { name = "pandas", marker = "extra == 'all'", specifier = ">=3.0.5,<4" },
@@ -3909,10 +3912,7 @@ docs = [
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.27,<1" },
 ]
 frontend = [{ name = "jupyterlab", specifier = ">=4,<5" }]
-gui = [
-    { name = "ipykernel", specifier = ">=6,<8" },
-    { name = "voila", specifier = ">=0.5,<0.6" },
-]
+gui = [{ name = "voila", specifier = ">=0.5,<0.6" }]
 
 [[package]]
 name = "sqlalchemy"

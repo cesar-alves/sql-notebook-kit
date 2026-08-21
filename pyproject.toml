@@ -19,7 +19,9 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "ipykernel>=6,<8",
     "ipython>=8,<10",
+    "jupyter-client>=8,<9",
     "sqlalchemy>=2.0.36,<3.0",
     "jupysql>=0.11,<0.12",
     "toml>=0.10.2,<1",
@@ -110,7 +112,6 @@ frontend = [
     "jupyterlab>=4,<5",
 ]
 gui = [
-    "ipykernel>=6,<8",
     "voila>=0.5,<0.6",
 ]
 

@@ -2,6 +2,8 @@
 
 ## 0.1.0
 
+- Make `ipykernel` and `jupyter-client` core runtime dependencies so clean pip
+  installations can be selected directly as Jupyter and VS Code kernels.
 - Generalize the alpha project as SQL Notebook Kit with neutral Python,
   frontend, CLI, configuration, metadata, MIME, comm, and CSS identities.
 - Add capability-driven built-in Redshift, DuckDB, Databricks, and BigQuery

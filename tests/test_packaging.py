@@ -8,9 +8,11 @@ import pytest
 ROOT = Path(__file__).parents[1]
 
 
-def test_core_dependencies_include_jupysql_toml_support():
+def test_core_dependencies_include_notebook_runtime_and_configuration_support():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
 
+    assert "ipykernel>=6,<8" in project["dependencies"]
+    assert "jupyter-client>=8,<9" in project["dependencies"]
     assert "toml>=0.10.2,<1" in project["dependencies"]
 
 
@@ -22,12 +24,15 @@ def test_visualization_extras_declare_nbformat():
     assert "nbformat>=5.10,<6" in extras["all"]
 
 
-def test_gui_group_declares_python_kernel():
+def test_gui_group_does_not_duplicate_python_kernel():
     dependency_groups = tomllib.loads((ROOT / "pyproject.toml").read_text())[
         "dependency-groups"
     ]
 
-    assert "ipykernel>=6,<8" in dependency_groups["gui"]
+    assert all(
+        not dependency.startswith("ipykernel")
+        for dependency in dependency_groups["gui"]
+    )
 
 
 def test_vscode_extension_manifest_matches_python_version():

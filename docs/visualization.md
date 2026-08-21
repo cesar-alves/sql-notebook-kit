@@ -8,6 +8,8 @@ uv pip install -e '.[viz]'
 
 The visualization extra supports pandas 3.0.5 or newer within the pandas 3
 release series and installs `nbformat` for Plotly notebook MIME rendering.
+The base package installs `ipykernel` and `jupyter-client`, so the selected
+Python environment includes the kernel runtime used by Jupyter and VS Code.
 JupyterLab 4 metadata support and the VS Code companion VSIX are bundled with
 the Python package. Published wheels and source distributions already contain
 the compiled VSIX. Git and path installs build it automatically when it is
