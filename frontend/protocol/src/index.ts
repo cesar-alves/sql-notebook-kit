@@ -5,6 +5,28 @@ export const METADATA_NAMESPACE = 'sql_notebook_kit';
 export const LEGACY_METADATA_NAMESPACE = 'redshift_notebooks';
 
 export type ThemeKind = 'light' | 'dark' | 'high_contrast';
+export interface ThemeTokens {
+  background: string;
+  surface: string;
+  surface_muted: string;
+  surface_raised: string;
+  text: string;
+  text_muted: string;
+  border: string;
+  accent: string;
+  accent_hover: string;
+  focus: string;
+  danger: string;
+  warning_bg: string;
+  warning_text: string;
+  selection_bg: string;
+  input_bg: string;
+}
+
+export interface ResolvedTheme {
+  kind: ThemeKind;
+  tokens: ThemeTokens;
+}
 export type Operation =
   | 'capabilities'
   | 'capabilities_result'

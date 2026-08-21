@@ -338,5 +338,10 @@ class VisualizationManager:
         if subscribe is not None:
             subscribe(listener)
 
+    @property
+    def frontend_manages_theme(self) -> bool:
+        """Return whether theme changes are applied directly by the frontend."""
+        return bool(getattr(self._bridge, "frontend_manages_theme", False))
+
 
 __all__ = ["PersistenceBridge", "SessionPersistenceBridge", "VisualizationManager"]

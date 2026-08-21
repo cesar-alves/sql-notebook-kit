@@ -37,6 +37,64 @@ def test_workspace_root_is_unframed_except_in_forced_colors():
     assert "border: 1px solid CanvasText" in forced_colors
 
 
+def test_workspace_starts_with_the_managers_current_theme(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
+    result.visualizations._bridge.theme = ThemeContext.fallback("dark")
+
+    workspace = VisualizationWorkspace(result)
+
+    assert "snk-theme-dark" in workspace.root._dom_classes
+    assert "snk-theme-light" not in workspace.root._dom_classes
+
+
+def test_vscode_theme_change_does_not_rebuild_widget_output(monkeypatch):
+    from sql_notebook_kit.visualize import protocol
+    from sql_notebook_kit.visualize.manager import VisualizationManager
+
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(protocol.threading.Timer, "start", lambda _self: None)
+    result = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
+    manager = VisualizationManager(
+        result, bridge=protocol.VscodePersistenceBridge("vscode-notebook-cell:/example#1")
+    )
+    result._visualizations = manager
+    workspace = VisualizationWorkspace(result)
+    rebuilt = []
+    monkeypatch.setattr(workspace, "_show_active", lambda: rebuilt.append(True))
+
+    workspace._theme_changed(ThemeContext.fallback("dark"))
+
+    assert workspace.theme.kind == "dark"
+    assert "snk-theme-dark" in workspace.root._dom_classes
+    assert rebuilt == []
+
+
+def test_python_collected_result_attaches_the_executing_cell_context(monkeypatch):
+    saved = VisualizationCollection().to_dict()
+
+    class Shell:
+        def get_parent(self):
+            return {
+                "metadata": {
+                    "cellId": "vscode-notebook-cell:/example#lazy",
+                    "sql_notebook_kit": {"visualizations": saved},
+                }
+            }
+
+    monkeypatch.setattr("IPython.get_ipython", lambda: Shell())
+    monkeypatch.setattr(NotebookResult, "visualize", lambda _self: "workspace")
+    displayed = []
+    monkeypatch.setattr("IPython.display.display", lambda value: displayed.append(value))
+    result = NotebookResult(pd.DataFrame({"value": [1]}), raw=None)
+
+    result._ipython_display_()
+
+    assert result.cell_id == "vscode-notebook-cell:/example#lazy"
+    assert result.visualization_metadata == saved
+    assert displayed == ["workspace"]
+
+
 def binding(role, column, index, **kwargs):
     return FieldBinding(role, column, index, **kwargs)
 
@@ -66,6 +124,11 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
     assert "snk-row-notice" in workspace.notice.value
     assert "snk-export-button" in workspace.export_button._dom_classes
     assert "snk-export-status" in workspace.export_status.value
+    assert isinstance(workspace.output, workspace.widgets.VBox)
+    assert len(workspace.output.children) == 1
+    assert isinstance(workspace.output.children[0], workspace.widgets.HTML)
+    assert "snk-result-table" in workspace.output.children[0].value
+    assert not isinstance(workspace.output.children[0], workspace.widgets.Output)
 
     chart = spec("histogram", (binding("value", "amount", 1),))
     result.visualizations.add(chart, persist=False)
@@ -87,16 +150,11 @@ def test_workspace_uses_tab_strip_muted_footer_and_contextual_actions(monkeypatc
     assert workspace.export_button.layout.display == "none"
 
 
-def test_workspace_composes_active_chart_into_one_top_level_display(monkeypatch):
-    displayed = []
-    monkeypatch.setattr(
-        "IPython.display.display", lambda value, *_args, **_kwargs: displayed.append(value)
-    )
+def test_workspace_composes_active_chart_into_one_atomic_widget_tree():
     result = NotebookResult(
         pd.DataFrame({"category": ["alpha", "beta"], "amount": [1, 2]}), raw=None
     )
     workspace = VisualizationWorkspace(result)
-    displayed.clear()
     chart = spec(
         "bar",
         (binding("x", "category", 0), binding("y", "amount", 1)),
@@ -105,8 +163,7 @@ def test_workspace_composes_active_chart_into_one_top_level_display(monkeypatch)
 
     workspace._show_active()
 
-    assert len(displayed) == 1
-    composed = displayed[0]
+    composed = workspace.output
     assert isinstance(composed, workspace.widgets.VBox)
     assert len(composed.children) == 3
     assert "2 source → 2 filtered → 2 plotted rows" in composed.children[0].value
@@ -171,6 +228,7 @@ def test_tsv_and_copy_table_markup_preserve_special_values_safely():
         '"a\tb"\t"say ""hello"""\t"line one\nline two"\t\t[1, 2]'
     )
     rendered = _table_html(frame, label='Query "result"')
+    assert '<table class="snk-result-table" role="grid"' in rendered
     assert 'aria-label="Query &quot;result&quot;"' in rendered
     assert 'data-snk-null="true">—</td>' in rendered
     assert "<script" not in rendered
@@ -192,6 +250,9 @@ def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
     css = files("sql_notebook_kit.visualize").joinpath("workspace.css").read_text()
 
     assert "table-layout: auto; width: max-content; min-width: 100%;" in css
+    assert "table.snk-result-table" in css
+    assert "border: 0; outline: 0; box-shadow: none;" in css
+    assert "table.snk-result-table [data-snk-row][data-snk-column]:focus-visible" in css
     assert ".snk-row-notice" in css
     assert "color: var(--snk-text-muted)" in css
     assert ".snk-name-control input" in css

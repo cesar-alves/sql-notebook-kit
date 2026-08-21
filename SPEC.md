@@ -217,6 +217,12 @@ output; component borders remain available for tables, controls, warnings, and
 other structural boundaries. Forced-colors mode retains an explicit root
 boundary.
 
+Frontend-owned output padding is part of the same surface contract. A companion
+may mark and theme only output elements that it has positively identified as
+SQL Notebook Kit workspaces; it must not restyle generic ipywidgets or notebook
+outputs. Host table frames are reset on the package's explicitly classed result
+table, while header and cell boundaries continue to use `--snk-border`.
+
 The frontend companion resolves host theme values into this stable semantic
 token contract:
 
