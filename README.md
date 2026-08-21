@@ -15,6 +15,9 @@ uv pip install -e '.[duckdb,viz]'
 ```
 
 Use the resulting environment as the notebook kernel.
+The base package installs `ipykernel` and `jupyter-client`, so a clean pip or uv
+environment has the Python kernel runtime required by Jupyter and VS Code. The
+`viz` extra remains required for Plotly and ipywidgets visualizations.
 
 For VS Code, install the companion bundled in the same Python package and
 reload the window. When using an editable source checkout, compile and stage
