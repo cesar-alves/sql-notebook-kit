@@ -11,7 +11,7 @@ from dataclasses import replace
 from importlib.resources import files
 from typing import Any, cast
 
-from sql_notebook_kit.errors import VisualizationError
+from sql_notebook_kit.errors import VisualizationConfigError, VisualizationError
 from sql_notebook_kit.visualize.core import (
     build_figure,
     classify_columns,
@@ -19,13 +19,21 @@ from sql_notebook_kit.visualize.core import (
     prepare_data,
     validate_visualization,
 )
-from sql_notebook_kit.visualize.models import FieldBinding, VisualizationSpec
+from sql_notebook_kit.visualize.models import ChartType, FieldBinding, VisualizationSpec
 from sql_notebook_kit.visualize.registry import (
     get_visualization_definition,
     list_visualization_definitions,
 )
 
 WORKSPACE_CSS = "<style>" + files(__package__).joinpath("workspace.css").read_text() + "</style>"
+
+
+def _validated_chart_type(value: Any) -> ChartType:
+    if not isinstance(value, str):
+        raise VisualizationConfigError("must be selected", path="chart_type")
+    chart_type = cast(ChartType, value)
+    get_visualization_definition(chart_type)
+    return chart_type
 
 
 def _is_missing(value: Any) -> bool:
@@ -130,6 +138,7 @@ class VisualizationWorkspace:
         self._drafts: dict[str, VisualizationSpec] = {}
         self._pending: asyncio.TimerHandle | None = None
         self._generation = 0
+        self._editor_open = False
         self._updating_tabs = False
         self.css = widgets.HTML(WORKSPACE_CSS)
         rows = len(result.dataframe)
@@ -435,16 +444,23 @@ class VisualizationWorkspace:
         self._show_active()
 
     def _open_editor(self, spec: VisualizationSpec, *, creating: bool) -> None:
+        self._close_editor()
+        self._editor_open = True
         self._draft = spec
         self._drafts = {spec.chart_type: spec}
         widgets = self.widgets
         self.name_control = widgets.Text(description="Name", value=spec.name)
         self.name_control.add_class("snk-name-control")
+        self.name_control.add_class("snk-editor-control")
+        self.name_control.add_class("snk-text-control")
         self.type_control = widgets.Dropdown(
             description="Type",
             options=[(item.label, item.id) for item in list_visualization_definitions()],
             value=spec.chart_type,
         )
+        self.type_control.add_class("snk-editor-control")
+        self.type_control.add_class("snk-type-control")
+        self.type_control.add_class("snk-select-control")
         self.type_control.observe(self._change_type, names="value")
         self.field_box = widgets.VBox()
         self.option_box = widgets.VBox()
@@ -503,6 +519,9 @@ class VisualizationWorkspace:
                     options=options,
                     value=selected[0].column_index if selected else None,
                 )
+            control.add_class("snk-editor-control")
+            control.add_class("snk-field-control")
+            control.add_class("snk-select-control")
             control.observe(self._schedule_preview, names="value")
             self.field_controls[role.role] = control
             controls.append(control)
@@ -529,6 +548,9 @@ class VisualizationWorkspace:
                 control = self.widgets.Text(
                     description=item.label, value="" if value is None else str(value)
                 )
+            control.add_class("snk-editor-control")
+            control.add_class("snk-option-control")
+            control.add_class(f"snk-{item.kind}-control")
             control.observe(self._schedule_preview, names="value")
             self.option_controls[item.key] = control
             option_controls.append(control)
@@ -537,8 +559,9 @@ class VisualizationWorkspace:
         sections.set_title(0, "Options")
         self.option_box.children = (sections,)
 
-    def _collect_draft(self) -> VisualizationSpec:
-        assert self._draft is not None
+    def _collect_draft(self, *, chart_type: ChartType | None = None) -> VisualizationSpec:
+        if not self._editor_open or self._draft is None:
+            raise VisualizationConfigError("editor is not open")
         columns = classify_columns(self.result.dataframe)
         previous = {(item.role, item.column_index): item for item in self._draft.fields}
         fields = []
@@ -549,6 +572,15 @@ class VisualizationWorkspace:
                 else (() if control.value is None else (control.value,))
             )
             for index in values:
+                if (
+                    isinstance(index, bool)
+                    or not isinstance(index, int)
+                    or not 0 <= index < len(columns)
+                ):
+                    raise VisualizationConfigError(
+                        "selection no longer identifies a result column",
+                        path=f"fields.{role}",
+                    )
                 old = previous.get((role, index))
                 fields.append(
                     old
@@ -569,17 +601,19 @@ class VisualizationWorkspace:
             if isinstance(control, self.widgets.IntText) and value == 0 and key in ("limit",):
                 value = None
             options[key] = value
+        chart_type = chart_type or _validated_chart_type(self.type_control.value)
         return replace(
             self._draft,
             name=self.name_control.value,
-            chart_type=self.type_control.value,
+            chart_type=chart_type,
             fields=tuple(fields),
             options=options,
         )
 
     def _schedule_preview(self, _change: Any = None) -> None:
-        if self._pending:
-            self._pending.cancel()
+        if not self._editor_open or self._draft is None:
+            return
+        self._cancel_pending_preview()
         self._generation += 1
         try:
             loop = asyncio.get_running_loop()
@@ -592,8 +626,13 @@ class VisualizationWorkspace:
     def _render_preview(self, generation: int | None = None) -> None:
         from IPython.display import display
 
-        if generation is not None and generation != self._generation:
+        if (
+            not self._editor_open
+            or self._draft is None
+            or (generation is not None and generation != self._generation)
+        ):
             return
+        self._pending = None
         try:
             draft = self._collect_draft()
             validate_visualization(self.result.dataframe, draft)
@@ -611,35 +650,61 @@ class VisualizationWorkspace:
             display(figure)
 
     def _change_type(self, change: dict[str, Any]) -> None:
-        if self._draft:
-            with suppress(Exception):
-                self._drafts[change["old"]] = self._collect_draft()
-        draft = self._drafts.get(change["new"])
+        if not self._editor_open or self._draft is None:
+            return
+        try:
+            new_type = _validated_chart_type(change.get("new"))
+        except VisualizationError as exc:
+            self._error(exc)
+            return
+        old_type = change.get("old")
+        if isinstance(old_type, str):
+            with suppress(VisualizationError, ValueError):
+                previous_type = _validated_chart_type(old_type)
+                self._drafts[old_type] = self._collect_draft(chart_type=previous_type)
+        draft = self._drafts.get(new_type)
         if draft is None:
-            assert self._draft is not None
             inferred = infer_visualization(self.result.dataframe, name=self.name_control.value)
             draft = replace(
-                inferred, id=self._draft.id, chart_type=change["new"], fields=(), options={}
+                inferred, id=self._draft.id, chart_type=new_type, fields=(), options={}
             )
         self._draft = draft
         self._build_controls(draft)
         self._schedule_preview()
 
     def _reset_editor(self) -> None:
-        assert self._draft is not None
+        if not self._editor_open or self._draft is None:
+            return
+        try:
+            chart_type = _validated_chart_type(self.type_control.value)
+        except VisualizationError as exc:
+            self._error(exc)
+            return
         reset = infer_visualization(self.result.dataframe, name=self.name_control.value)
-        if reset.chart_type != self.type_control.value:
+        if reset.chart_type != chart_type:
             reset = replace(
-                reset, id=self._draft.id, chart_type=self.type_control.value, fields=(), options={}
+                reset, id=self._draft.id, chart_type=chart_type, fields=(), options={}
             )
         self._draft = reset
         self._build_controls(reset)
         self._schedule_preview()
 
     def _cancel_editor(self) -> None:
-        self._pending.cancel() if self._pending else None
+        self._close_editor()
         self.body.children = (self.output,)
         self._show_active()
+
+    def _cancel_pending_preview(self) -> None:
+        if self._pending is not None:
+            self._pending.cancel()
+            self._pending = None
+
+    def _close_editor(self) -> None:
+        self._cancel_pending_preview()
+        self._generation += 1
+        self._editor_open = False
+        self._draft = None
+        self._drafts = {}
 
     def _apply_editor(self, creating: bool) -> None:
         try:
@@ -649,6 +714,7 @@ class VisualizationWorkspace:
         except (VisualizationError, ValueError) as exc:
             self._error(exc)
             return
+        self._close_editor()
         self._refresh_tabs()
         self.body.children = (self.output,)
         self._show_active()
@@ -672,7 +738,7 @@ class VisualizationWorkspace:
             # VS Code intentionally discards, leaving an otherwise live widget blank.
             # Its renderer applies the same tokens directly to the workspace DOM.
             return
-        if self._draft is not None and hasattr(self, "preview"):
+        if self._editor_open and self._draft is not None:
             self._schedule_preview()
         else:
             self._show_active()

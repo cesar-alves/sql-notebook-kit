@@ -156,11 +156,19 @@ from fresh bounded data and restores the saved collection from cell metadata.
 
 The workspace follows JupyterLab or VS Code light, dark, and high-contrast
 themes without changing notebook metadata. Plotly modebars remain enabled for
-zoom, pan, reset, legend interaction, and secondary PNG download. Controls have keyboard
-focus, programmatic labels, live validation status, and a responsive layout for
-640-pixel notebook outputs and 200% browser zoom. Visualization name fields and
-the expandable Options section use the active theme's input, surface, text,
-border, selection, and focus colors.
+zoom, pan, reset, legend interaction, and secondary PNG download. Controls have
+keyboard focus, programmatic labels, live validation status, and a responsive
+layout for 640-pixel notebook outputs and 200% browser zoom. Every editor label
+and value—including Name, Type, field selectors, checkboxes, numeric inputs,
+text inputs, and the expandable Options section—uses the active theme's input,
+surface, text, border, selection, and focus colors. Editor rows fill the
+configuration panel, with a consistent label column and controls that expand
+into the remaining space.
+
+Closing or applying the editor cancels queued previews and clears its transient
+draft state. Late widget events, stale column selections, and theme changes
+after the editor closes cannot rebuild a hidden preview or apply an invalid
+draft.
 
 The VS Code companion also themes the host-owned padding around a recognized SQL
 Notebook Kit workspace. In both frontends, result-table grids remain visible
