@@ -37,6 +37,9 @@
 - Apply theme-aware text colors and full-width sizing to every visualization
   editor control, and harden editor teardown against stale selections, events,
   and queued previews.
+- Classify DB-API `Decimal` result columns as numeric while preserving exact
+  Decimal filtering, aggregation, table, and copy semantics until the guarded
+  Plotly rendering boundary.
 
 - Define a synchronous DBAPI connection-factory contract and managed notebook session.
 - Add named profiles, environment/secret resolution, and reference browser SSO factories.
