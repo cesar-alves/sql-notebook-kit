@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from decimal import Decimal, DecimalException, InvalidOperation, localcontext
+from functools import partial
 from typing import Any, cast
 
 from sql_notebook_kit.errors import VisualizationConfigError, VisualizationRenderError
@@ -40,18 +43,28 @@ class PreparedData:
         return getattr(self.frame, name)
 
 
+def _is_decimal_series(series: Any) -> bool:
+    """Return whether every non-null value is a Decimal without coercing data."""
+    from pandas.api import types as ptypes
+
+    return ptypes.infer_dtype(series, skipna=True) == "decimal"
+
+
 def classify_columns(frame: Any) -> tuple[ColumnInfo, ...]:
     from pandas.api import types as ptypes
 
     result: list[ColumnInfo] = []
     for index, label in enumerate(frame.columns):
         dtype = frame.dtypes.iloc[index]
+        series = frame.iloc[:, index]
         if ptypes.is_bool_dtype(dtype):
             kind: ColumnKind = "boolean"
         elif ptypes.is_numeric_dtype(dtype):
             kind = "numeric"
         elif ptypes.is_datetime64_any_dtype(dtype):
             kind = "datetime"
+        elif ptypes.is_object_dtype(dtype) and _is_decimal_series(series):
+            kind = "numeric"
         elif (
             ptypes.is_string_dtype(dtype)
             or ptypes.is_categorical_dtype(dtype)
@@ -240,7 +253,7 @@ def _literal_string_filter(series: Any, operator: str, value: Any) -> Any:
     return operations[operator]()
 
 
-def _coerce_filter_value(series: Any, value: Any) -> Any:
+def _coerce_filter_value(series: Any, value: Any, *, decimal: bool = False) -> Any:
     import pandas as pd
     from pandas.api import types as ptypes
 
@@ -260,6 +273,24 @@ def _coerce_filter_value(series: Any, value: Any) -> Any:
             raise VisualizationConfigError(
                 "invalid or ambiguous datetime", path="filters.value"
             ) from exc
+    if decimal:
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+            raise VisualizationConfigError(
+                "requires a finite decimal value", path="filters.value"
+            )
+        try:
+            converted = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            raise VisualizationConfigError(
+                "requires a finite decimal value", path="filters.value"
+            ) from None
+        if not converted.is_finite():
+            raise VisualizationConfigError(
+                "requires a finite decimal value", path="filters.value"
+            )
+        return converted
     if ptypes.is_numeric_dtype(series.dtype) and not isinstance(value, (int, float)):
         try:
             return float(value)
@@ -270,7 +301,7 @@ def _coerce_filter_value(series: Any, value: Any) -> Any:
     return value
 
 
-def _filter_mask(series: Any, item: FilterSpec) -> Any:
+def _filter_mask(series: Any, item: FilterSpec, *, decimal: bool = False) -> Any:
     operator = item.operator.replace(" ", "_")
     if operator == "is_null":
         return series.isna()
@@ -281,14 +312,18 @@ def _filter_mask(series: Any, item: FilterSpec) -> Any:
     if operator in ("in", "not_in"):
         if not isinstance(item.value, list) or not item.value:
             raise VisualizationConfigError("requires a non-empty array", path="filters.value")
-        mask = series.isin([_coerce_filter_value(series, value) for value in item.value])
+        mask = series.isin(
+            [_coerce_filter_value(series, value, decimal=decimal) for value in item.value]
+        )
         return ~mask if operator == "not_in" else mask
     if operator == "between":
         if not isinstance(item.value, list) or len(item.value) != 2:
             raise VisualizationConfigError("requires a two-item array", path="filters.value")
-        lower, upper = (_coerce_filter_value(series, value) for value in item.value)
+        lower, upper = (
+            _coerce_filter_value(series, value, decimal=decimal) for value in item.value
+        )
         return series.between(lower, upper, inclusive="both")
-    value = _coerce_filter_value(series, item.value)
+    value = _coerce_filter_value(series, item.value, decimal=decimal)
     operations = {
         "equals": lambda: series == value,
         "eq": lambda: series == value,
@@ -324,6 +359,71 @@ def _bucket(series: Any, grain: str) -> Any:
     return series.dt.floor({"day": "D", "hour": "h", "minute": "min"}[grain])
 
 
+def _decimal_aggregate(series: Any, operation: str) -> Decimal | None:
+    """Apply reducers that pandas otherwise casts to float or cannot evaluate."""
+    values = [
+        value for value in series if isinstance(value, Decimal) and not value.is_nan()
+    ]
+    if not values:
+        return None
+    if any(not value.is_finite() for value in values):
+        raise VisualizationRenderError(
+            "Decimal transformations require finite values."
+        )
+    try:
+        with localcontext():
+            if operation == "mean":
+                return sum(values, Decimal(0)) / Decimal(len(values))
+            if operation == "median":
+                ordered = sorted(values)
+                middle = len(ordered) // 2
+                if len(ordered) % 2:
+                    return ordered[middle]
+                return (ordered[middle - 1] + ordered[middle]) / Decimal(2)
+            if len(values) < 2:
+                return None
+            mean = sum(values, Decimal(0)) / Decimal(len(values))
+            variance = sum(
+                ((value - mean) ** 2 for value in values), Decimal(0)
+            ) / Decimal(len(values) - 1)
+            return variance.sqrt() if operation == "std" else variance
+    except DecimalException as exc:
+        raise VisualizationRenderError(
+            "Decimal data could not be aggregated with the active decimal context."
+        ) from exc
+
+
+def _plotly_decimal(value: Any) -> Any:
+    if not isinstance(value, Decimal):
+        return value
+    if not value.is_finite():
+        raise VisualizationRenderError(
+            "Decimal chart data must contain only finite values."
+        )
+    converted = float(value)
+    if not math.isfinite(converted) or (value != 0 and converted == 0):
+        raise VisualizationRenderError(
+            "Decimal chart data is outside Plotly's supported numeric range."
+        )
+    return converted
+
+
+def _plotly_data(frame: Any, chart_type: str) -> Any:
+    """Create a render-only projection while preserving exact prepared data."""
+    data = frame.copy(deep=False)
+    for column in data.columns:
+        series = data[column]
+        if not _is_decimal_series(series):
+            continue
+        if chart_type == "table":
+            data[column] = series.map(
+                lambda value: str(value) if isinstance(value, Decimal) else value
+            )
+        else:
+            data[column] = series.map(_plotly_decimal)
+    return data
+
+
 def prepare_data(frame: Any, spec: VisualizationSpec) -> PreparedData:
     """Prepare a detached local frame in the specification's fixed operation order."""
     import pandas as pd
@@ -337,6 +437,9 @@ def prepare_data(frame: Any, spec: VisualizationSpec) -> PreparedData:
     if spec.chart_type == "table" and not spec.fields:
         indices = list(range(len(frame.columns)))
     internal = {index: f"__rn_column_{index}" for index in indices}
+    decimal_columns = {
+        index for index in indices if _is_decimal_series(frame.iloc[:, index])
+    }
     data = frame.iloc[:, indices].copy(deep=True)
     data.columns = [internal[index] for index in indices]
     for filter_index, item in enumerate(spec.filters):
@@ -344,7 +447,11 @@ def prepare_data(frame: Any, spec: VisualizationSpec) -> PreparedData:
             continue
         key = internal[item.column_index]
         try:
-            data = data.loc[_filter_mask(data[key], item).fillna(False)].copy()
+            data = data.loc[
+                _filter_mask(
+                    data[key], item, decimal=item.column_index in decimal_columns
+                ).fillna(False)
+            ].copy()
         except VisualizationConfigError as exc:
             raise VisualizationConfigError(
                 str(exc).split(": ", 1)[-1], path=f"filters[{filter_index}].value"
@@ -368,7 +475,10 @@ def prepare_data(frame: Any, spec: VisualizationSpec) -> PreparedData:
                 raise VisualizationConfigError(
                     "zero is available only for numeric values", path="options.missing_value_policy"
                 )
-            data[internal[binding.column_index]] = data[internal[binding.column_index]].fillna(0)
+            fill_value = Decimal(0) if binding.column_index in decimal_columns else 0
+            data[internal[binding.column_index]] = data[internal[binding.column_index]].fillna(
+                fill_value
+            )
     elif missing_policy == "hide" and missing_measures:
         data = data.dropna(subset=[internal[item.column_index] for item in missing_measures]).copy()
 
@@ -396,10 +506,26 @@ def prepare_data(frame: Any, spec: VisualizationSpec) -> PreparedData:
                     "standard_deviation": "std",
                     "variance": "var",
                 }.get(binding.aggregation, binding.aggregation)
+                decimal_reducer = (
+                    partial(_decimal_aggregate, operation=operation)
+                    if operation in ("mean", "median", "std", "var")
+                    and _is_decimal_series(data[key])
+                    else None
+                )
                 if grouped is not None:
-                    part = grouped[key].agg(operation).rename(target).reset_index()
+                    part = (
+                        grouped[key]
+                        .agg(decimal_reducer or operation)
+                        .rename(target)
+                        .reset_index()
+                    )
                 else:
-                    part = pd.DataFrame({target: [getattr(data[key], operation)()]})
+                    value = (
+                        decimal_reducer(data[key])
+                        if decimal_reducer is not None
+                        else getattr(data[key], operation)()
+                    )
+                    part = pd.DataFrame({target: [value]})
             internal[binding.column_index] = target
             parts.append(part)
         data = parts[0]
@@ -466,7 +592,7 @@ def build_figure(
     theme = theme or ThemeContext.fallback("light")
     template = build_plotly_template(theme)
     prepared = _prepared or prepare_data(frame, spec)
-    data = prepared.frame
+    data = _plotly_data(prepared.frame, spec.chart_type)
     options = {**default_options(spec.chart_type), **spec.options}
     title = cast(str | None, options.get("title"))
     if data.empty:
@@ -785,7 +911,7 @@ def build_figure(
             }
         )
         return figure
-    except VisualizationConfigError:
+    except (VisualizationConfigError, VisualizationRenderError):
         raise
     except Exception as exc:
         raise VisualizationRenderError("The visualization could not be rendered.") from exc

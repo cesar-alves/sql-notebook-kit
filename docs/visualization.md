@@ -74,6 +74,14 @@ row to detect truncation, detaches the bounded DataFrame, and closes the result
 cursor. Filters, date buckets, aggregation, sorting, and limits operate only on
 this detached frame and never rerun or rewrite SQL.
 
+SQL `NUMERIC` and `DECIMAL` results remain Python `Decimal` values throughout
+local filtering, aggregation, sorting, table display, and clipboard export.
+They are not eagerly converted to `float64`. Numeric charts use a detached
+Plotly-only projection because browsers represent plotted coordinates as
+binary floating-point numbers; non-finite values and values that would overflow
+or underflow that representation are rejected instead of silently becoming a
+null or zero. The bounded result and prepared/copy data remain exact.
+
 ```python
 session.register(max_rows=25_000)
 ```

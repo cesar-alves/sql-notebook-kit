@@ -2,6 +2,7 @@ import base64
 import json
 import uuid
 from dataclasses import replace
+from decimal import Decimal
 from importlib.resources import files
 from types import SimpleNamespace
 
@@ -10,7 +11,7 @@ import plotly.io as pio
 import pytest
 from plotly.io import _renderers
 
-from sql_notebook_kit.errors import VisualizationConfigError
+from sql_notebook_kit.errors import VisualizationConfigError, VisualizationRenderError
 from sql_notebook_kit.results import NotebookResult
 from sql_notebook_kit.visualize import (
     FieldBinding,
@@ -21,6 +22,7 @@ from sql_notebook_kit.visualize import (
     VisualizationWorkspace,
     build_figure,
     build_plotly_template,
+    classify_columns,
     infer_visualization,
     list_visualization_definitions,
     prepare_data,
@@ -377,6 +379,39 @@ def test_inference_uses_documented_priority_and_positions():
     assert [(item.role, item.column_index) for item in inferred.fields] == [("x", 0), ("y", 2)]
 
 
+def test_decimal_columns_are_numeric_without_coercing_object_data():
+    frame = pd.DataFrame(
+        {
+            "category": ["a", "b", "c"],
+            "amount": [Decimal("1.50"), None, Decimal("3.250000000000000001")],
+        }
+    )
+    original = frame.copy(deep=True)
+
+    columns = classify_columns(frame)
+    inferred = infer_visualization(frame)
+
+    assert [item.kind for item in columns] == ["categorical", "numeric"]
+    assert inferred.chart_type == "bar"
+    assert [(item.role, item.column_index) for item in inferred.fields] == [("x", 0), ("y", 1)]
+    assert frame["amount"].dtype == object
+    assert isinstance(frame.loc[0, "amount"], Decimal)
+    pd.testing.assert_frame_equal(frame, original)
+
+
+def test_empty_all_null_and_mixed_object_columns_are_not_decimal_numeric():
+    frame = pd.DataFrame(
+        {
+            "all_null": pd.Series([None, None], dtype=object),
+            "mixed": pd.Series([Decimal("1.0"), 2], dtype=object),
+        }
+    )
+    empty = pd.DataFrame({"value": pd.Series([], dtype=object)})
+
+    assert [item.kind for item in classify_columns(frame)] == ["categorical", "categorical"]
+    assert classify_columns(empty)[0].kind == "categorical"
+
+
 def test_public_specs_round_trip_and_reject_unknown_or_non_finite_values():
     original = spec(
         "bar",
@@ -448,6 +483,149 @@ def test_prepare_data_filters_buckets_aggregates_sorts_limits_without_mutation()
     assert prepared.plotted_rows == 1
     assert prepared.frame.iloc[0, -1] == 10
     pd.testing.assert_frame_equal(frame, original)
+
+
+def test_decimal_filters_use_exact_values_instead_of_binary_float_coercion():
+    frame = pd.DataFrame(
+        {
+            "amount": [
+                Decimal("0.1"),
+                Decimal("0.100000000000000001"),
+                Decimal("0.2"),
+            ]
+        }
+    )
+    chart = spec(
+        "table",
+        filters=(
+            FilterSpec(
+                "amount",
+                0,
+                "between",
+                ["0.100000000000000001", "0.2"],
+            ),
+        ),
+        options={},
+    )
+
+    prepared = prepare_data(frame, chart)
+
+    assert prepared.frame.iloc[:, 0].tolist() == [
+        Decimal("0.100000000000000001"),
+        Decimal("0.2"),
+    ]
+    with pytest.raises(VisualizationConfigError, match="finite decimal value"):
+        prepare_data(
+            frame,
+            replace(chart, filters=(FilterSpec("amount", 0, "greater_than", "Infinity"),)),
+        )
+
+
+def test_decimal_filter_coercion_survives_an_earlier_empty_filter_result():
+    frame = pd.DataFrame({"amount": [Decimal("0.1"), Decimal("0.2")]})
+    chart = spec(
+        "table",
+        filters=(
+            FilterSpec("amount", 0, "equals", "9.9"),
+            FilterSpec("amount", 0, "greater_than", "0.1"),
+        ),
+        options={},
+    )
+
+    prepared = prepare_data(frame, chart)
+
+    assert prepared.frame.empty
+
+
+@pytest.mark.parametrize(
+    ("aggregation", "expected"),
+    [
+        ("average", Decimal("2.20")),
+        ("median", Decimal("2.20")),
+        ("variance", Decimal("1.21")),
+        ("standard_deviation", Decimal("1.1")),
+    ],
+)
+def test_decimal_reducers_preserve_decimal_semantics(aggregation, expected):
+    frame = pd.DataFrame(
+        {
+            "group": ["a", "a", "a"],
+            "amount": [Decimal("1.10"), Decimal("2.20"), Decimal("3.30")],
+        }
+    )
+    original = frame.copy(deep=True)
+    chart = spec(
+        "bar",
+        (
+            binding("x", "group", 0),
+            binding("y", "amount", 1, aggregation=aggregation),
+        ),
+    )
+
+    prepared = prepare_data(frame, chart)
+    value = prepared.frame.iloc[0, -1]
+
+    assert isinstance(value, Decimal)
+    assert value == expected
+    pd.testing.assert_frame_equal(frame, original)
+
+
+def test_decimal_zero_fill_stays_decimal_before_aggregation():
+    frame = pd.DataFrame({"group": ["a", "a"], "amount": [Decimal("1.0"), None]})
+    chart = spec(
+        "bar",
+        (
+            binding("x", "group", 0),
+            binding("y", "amount", 1, aggregation="average"),
+        ),
+        options={"missing_value_policy": "zero"},
+    )
+
+    prepared = prepare_data(frame, chart)
+
+    assert prepared.frame.iloc[0, -1] == Decimal("0.5")
+    assert isinstance(prepared.frame.iloc[0, -1], Decimal)
+
+
+def test_decimal_rendering_casts_only_the_detached_plotly_projection():
+    amount = Decimal("12345678901234567890.123456789")
+    frame = pd.DataFrame({"category": ["a"], "amount": [amount]})
+    chart = spec(
+        "bar",
+        (binding("x", "category", 0), binding("y", "amount", 1)),
+    )
+
+    prepared = prepare_data(frame, chart)
+    figure = build_figure(frame, chart, _prepared=prepared)
+
+    assert prepared.frame.iloc[0, -1] is amount
+    assert frame.loc[0, "amount"] is amount
+    assert figure.data[0].y[0] == float(amount)
+    assert isinstance(figure.data[0].y[0], float)
+
+
+def test_decimal_tables_render_exact_text_and_copy_exact_values():
+    amount = Decimal("12345678901234567890.123456789")
+    frame = pd.DataFrame({"category": ["a"], "amount": [amount]})
+    chart = spec("table")
+
+    prepared = prepare_data(frame, chart)
+    figure = build_figure(frame, chart, _prepared=prepared)
+
+    assert str(amount) in figure.data[0].cells.values[1]
+    assert prepared.frame.iloc[0, 1] is amount
+
+
+@pytest.mark.parametrize("value", [Decimal("Infinity"), Decimal("1E+400"), Decimal("1E-400")])
+def test_decimal_chart_projection_rejects_unsupported_numeric_ranges(value):
+    frame = pd.DataFrame({"category": ["a"], "amount": [value]})
+    chart = spec(
+        "bar",
+        (binding("x", "category", 0), binding("y", "amount", 1)),
+    )
+
+    with pytest.raises(VisualizationRenderError, match="Decimal chart data"):
+        build_figure(frame, chart)
 
 
 def test_literal_string_filter_and_duplicate_non_string_column_resolution():
