@@ -20,9 +20,19 @@
   --jp-border-color1: var(--snk-border);
 }
 .snk-viz-workspace * { box-sizing: border-box; }
-.snk-viz-workspace button, .snk-viz-workspace input, .snk-viz-workspace select {
+.snk-viz-workspace button,
+.snk-viz-workspace input,
+.snk-viz-workspace select,
+.snk-viz-workspace textarea {
   color: var(--snk-text) !important; background: var(--snk-input-bg) !important;
   border-color: var(--snk-border) !important;
+}
+.snk-viz-workspace .widget-label,
+.snk-viz-workspace .widget-checkbox label,
+.snk-viz-workspace .widget-valid,
+.snk-viz-workspace .widget-readout,
+.snk-viz-workspace .jupyter-widget-label {
+  color: var(--snk-text) !important;
 }
 .snk-viz-workspace select,
 .snk-viz-workspace select option { color-scheme: light; }
@@ -107,6 +117,21 @@
 .snk-viz-workspace .widget-label {
   white-space: normal !important; min-width: 8rem !important; width: auto !important;
 }
+.snk-viz-workspace .snk-editor-control {
+  width: 100% !important; max-width: none !important; min-width: 0 !important;
+}
+.snk-viz-workspace .snk-editor-control > .widget-label,
+.snk-viz-workspace .snk-editor-control > label {
+  flex: 0 0 8rem !important; width: 8rem !important; min-width: 8rem !important;
+}
+.snk-viz-workspace .snk-editor-control > input:not([type="checkbox"]),
+.snk-viz-workspace .snk-editor-control > select,
+.snk-viz-workspace .snk-editor-control > textarea {
+  flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+}
+.snk-viz-workspace .snk-checkbox-control > label {
+  flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+}
 .snk-viz-workspace .snk-name-control input {
   color: var(--snk-text) !important; background: var(--snk-input-bg) !important;
   border: 1px solid var(--snk-border) !important; caret-color: var(--snk-text);
@@ -122,6 +147,7 @@
 .snk-viz-workspace .snk-options-section,
 .snk-viz-workspace .snk-options-section > .p-AccordionPanel,
 .snk-viz-workspace .snk-options-section > .lm-AccordionPanel {
+  width: 100% !important; max-width: none !important; min-width: 0 !important;
   color: var(--snk-text) !important; background: var(--snk-surface) !important;
   border-color: var(--snk-border) !important;
 }
@@ -174,6 +200,7 @@
   border: 1px solid var(--snk-border); border-radius: 4px; padding: 12px;
 }
 .snk-viz-workspace .snk-dialog-panel { gap: 8px; max-width: 32rem; }
+.snk-viz-workspace .snk-editor-panel { width: 100%; min-width: 0; }
 @media (max-width: 640px) { .snk-editor { grid-template-columns: 1fr; } }
 .snk-viz-workspace.snk-theme-dark,
 .snk-viz-workspace.snk-theme-high-contrast {

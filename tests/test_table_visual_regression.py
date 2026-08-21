@@ -71,3 +71,68 @@ body {{ padding: 24px; }}
 
     assert not re.search(r"#(?:FFFFFF|FFFFFFFF)(?:\s|$)", histogram)
     assert "#343536" in histogram
+
+
+@pytest.mark.skipif(not CHROMIUM or not MAGICK, reason="Chromium and ImageMagick required")
+def test_dark_editor_controls_use_theme_text(tmp_path):
+    css = files("sql_notebook_kit.visualize").joinpath("workspace.css").read_text()
+    html = f"""<!doctype html>
+<style>
+html, body {{ margin: 0; background: #1e1e1e; color-scheme: dark; }}
+body {{ padding: 24px; }}
+{css}
+</style>
+<div class="snk-viz-workspace snk-theme-dark" style="width: 560px">
+  <div class="snk-editor-panel widget-vbox">
+    <div class="widget-inline-hbox snk-editor-control snk-name-control snk-text-control">
+      <label class="widget-label" for="name">Name</label><input id="name" value="Revenue">
+    </div>
+    <div class="widget-inline-hbox snk-editor-control snk-type-control snk-select-control">
+      <label class="widget-label" for="type">Type</label>
+      <select id="type"><option>Grouped bar chart with a deliberately long label</option></select>
+    </div>
+    <div class="widget-inline-hbox snk-editor-control snk-field-control snk-select-control">
+      <label class="widget-label" for="x">X</label>
+      <select id="x"><option>transaction_created_at — datetime</option></select>
+    </div>
+    <div class="widget-inline-hbox snk-editor-control snk-field-control snk-select-control">
+      <label class="widget-label" for="group">Group</label>
+      <select id="group"><option>customer_segment_name — categorical</option></select>
+    </div>
+    <div class="widget-checkbox snk-editor-control snk-option-control snk-checkbox-control">
+      <input id="legend" type="checkbox" checked><label for="legend">Show legend</label>
+    </div>
+    <div class="snk-options-section"><div class="jupyter-widget-Collapse-header">Options</div></div>
+  </div>
+</div>
+"""
+    page = tmp_path / "editor.html"
+    screenshot = tmp_path / "editor.png"
+    profile = tmp_path / "chromium-profile"
+    page.write_text(html)
+
+    subprocess.run(
+        [
+            CHROMIUM,
+            "--headless",
+            "--no-sandbox",
+            "--disable-gpu",
+            f"--user-data-dir={profile}",
+            "--window-size=640,420",
+            f"--screenshot={screenshot}",
+            page.as_uri(),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    histogram = subprocess.run(
+        [MAGICK, screenshot, "-format", "%c", "histogram:info:-"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.upper()
+
+    assert "#F0F0F0" in histogram
+    assert "#313131" in histogram
+    assert screenshot.stat().st_size > 1_000

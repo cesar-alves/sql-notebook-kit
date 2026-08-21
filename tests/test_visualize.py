@@ -3,6 +3,7 @@ import json
 import uuid
 from dataclasses import replace
 from importlib.resources import files
+from types import SimpleNamespace
 
 import pandas as pd
 import plotly.io as pio
@@ -234,7 +235,7 @@ def test_tsv_and_copy_table_markup_preserve_special_values_safely():
     assert "<script" not in rendered
 
 
-def test_editor_name_and_options_controls_have_theme_hooks(monkeypatch):
+def test_editor_controls_have_stable_theme_and_layout_hooks(monkeypatch):
     monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
     result = NotebookResult(pd.DataFrame({"category": ["alpha"], "amount": [1]}), raw=None)
     workspace = VisualizationWorkspace(result)
@@ -243,7 +244,99 @@ def test_editor_name_and_options_controls_have_theme_hooks(monkeypatch):
     workspace._open_editor(chart, creating=True)
 
     assert "snk-name-control" in workspace.name_control._dom_classes
+    assert "snk-editor-control" in workspace.name_control._dom_classes
+    assert "snk-type-control" in workspace.type_control._dom_classes
+    assert "snk-select-control" in workspace.type_control._dom_classes
+    assert all(
+        {"snk-editor-control", "snk-field-control", "snk-select-control"}
+        <= set(control._dom_classes)
+        for control in workspace.field_controls.values()
+    )
+    assert all(
+        {"snk-editor-control", "snk-option-control"} <= set(control._dom_classes)
+        for control in workspace.option_controls.values()
+    )
     assert "snk-options-section" in workspace.option_box.children[0]._dom_classes
+
+
+def test_editor_close_cancels_stale_preview_and_clears_transient_state(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"category": ["alpha"], "amount": [1]}), raw=None)
+    workspace = VisualizationWorkspace(result)
+    chart = spec("histogram", (binding("value", "amount", 1),))
+
+    class Pending:
+        cancelled = False
+
+        def cancel(self):
+            self.cancelled = True
+
+    workspace._open_editor(chart, creating=True)
+    pending = Pending()
+    workspace._pending = pending
+    generation = workspace._generation
+    workspace._cancel_editor()
+
+    assert pending.cancelled
+    assert workspace._pending is None
+    assert workspace._draft is None
+    assert workspace._drafts == {}
+    assert not workspace._editor_open
+    assert workspace._generation > generation
+    workspace._render_preview(generation)
+    with pytest.raises(VisualizationConfigError, match="editor is not open"):
+        workspace._collect_draft()
+
+
+def test_editor_rejects_invalid_events_and_stale_column_values(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"category": ["alpha"], "amount": [1]}), raw=None)
+    workspace = VisualizationWorkspace(result)
+    chart = spec("histogram", (binding("value", "amount", 1),))
+    workspace._open_editor(chart, creating=True)
+
+    original = workspace._draft
+    workspace._change_type({"old": "histogram", "new": None})
+    assert workspace._draft == original
+    assert "chart_type: must be selected" in workspace.editor_error.value
+
+    workspace.field_controls["value"] = SimpleNamespace(value=99)
+    with pytest.raises(VisualizationConfigError, match="no longer identifies"):
+        workspace._collect_draft()
+
+
+def test_editor_type_switch_preserves_each_typed_draft(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"category": ["alpha"], "amount": [1]}), raw=None)
+    workspace = VisualizationWorkspace(result)
+    chart = spec("histogram", (binding("value", "amount", 1),))
+    workspace._open_editor(chart, creating=True)
+
+    workspace.type_control.value = "bar"
+    workspace.type_control.value = "histogram"
+
+    assert workspace._draft is not None
+    assert workspace._draft.chart_type == "histogram"
+    assert workspace._drafts["bar"].chart_type == "bar"
+    assert workspace._drafts["histogram"].chart_type == "histogram"
+
+
+def test_closed_editor_theme_change_renders_active_output_not_preview(monkeypatch):
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    result = NotebookResult(pd.DataFrame({"amount": [1]}), raw=None)
+    workspace = VisualizationWorkspace(result)
+    chart = spec("histogram", (binding("value", "amount", 0),))
+    workspace._open_editor(chart, creating=True)
+    workspace._cancel_editor()
+    rendered = []
+    scheduled = []
+    monkeypatch.setattr(workspace, "_show_active", lambda: rendered.append(True))
+    monkeypatch.setattr(workspace, "_schedule_preview", lambda *_args: scheduled.append(True))
+
+    workspace._theme_changed(ThemeContext.fallback("dark"))
+
+    assert rendered == [True]
+    assert scheduled == []
 
 
 def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
@@ -256,6 +349,12 @@ def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
     assert ".snk-row-notice" in css
     assert "color: var(--snk-text-muted)" in css
     assert ".snk-name-control input" in css
+    assert ".snk-viz-workspace .widget-checkbox label" in css
+    assert ".snk-viz-workspace .widget-readout" in css
+    assert ".snk-viz-workspace .snk-editor-control" in css
+    assert "width: 100% !important; max-width: none !important; min-width: 0 !important;" in css
+    assert ".snk-viz-workspace .snk-editor-control > select" in css
+    assert ".snk-viz-workspace .snk-checkbox-control > label" in css
     assert ".snk-options-section .lm-AccordionPanel-title" in css
     assert ".jupyter-widget-Collapse-header" in css
     assert "--jp-widgets-input-background-color: var(--snk-input-bg)" in css
