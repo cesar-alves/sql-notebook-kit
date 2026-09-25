@@ -76,8 +76,8 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  publish:
-    name: Production / trusted publish and GitHub Release
+  publish-pypi:
+    name: Production / trusted publish to PyPI
     needs: verify-bundle
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -85,12 +85,9 @@ jobs:
       name: pypi
       url: https://pypi.org/p/sql-notebook-kit/${{ needs.verify-bundle.outputs.version }}
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ needs.verify-bundle.outputs.commit }}
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: production-verified-${{ inputs.tag }}-${{ inputs.source_run_id }}
@@ -99,6 +96,22 @@ jobs:
         with:
           packages-dir: release/python/
           attestations: false
+
+  github-release:
+    name: Production / create GitHub Release
+    needs: [verify-bundle, publish-pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.verify-bundle.outputs.commit }}
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: production-verified-${{ inputs.tag }}-${{ inputs.source_run_id }}
+          path: release
       - name: Create immutable GitHub Release while repository remains private
         env:
           GH_TOKEN: ${{ github.token }}
@@ -115,7 +128,7 @@ jobs:
 
   documentation:
     name: Production / versioned documentation
-    needs: [verify-bundle, publish]
+    needs: [verify-bundle, github-release]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:

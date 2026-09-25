@@ -75,10 +75,26 @@ def test_tag_workflow_cannot_publish_to_production_pypi():
 
 def test_production_deploys_versioned_docs_only_after_publish():
     workflow = (ROOT / ".github" / "workflows" / "release-production.yml").read_text()
-    assert "needs: [verify-bundle, publish]" in workflow
+    assert "needs: [verify-bundle, github-release]" in workflow
     assert "mike deploy --push --update-aliases" in workflow
     assert "actions/deploy-pages@" in workflow
     assert "/${VERSION}/" in workflow
+
+
+def test_production_release_creation_is_retryable_without_republishing_pypi():
+    workflow = (ROOT / ".github" / "workflows" / "release-production.yml").read_text()
+    publish = workflow.split("  publish-pypi:", 1)[1].split(
+        "  github-release:", 1
+    )[0]
+    github_release = workflow.split("  github-release:", 1)[1].split(
+        "  documentation:", 1
+    )[0]
+
+    assert "pypa/gh-action-pypi-publish@" in publish
+    assert "gh release create" not in publish
+    assert "needs: [verify-bundle, publish-pypi]" in github_release
+    assert "gh release create" in github_release
+    assert "pypa/gh-action-pypi-publish@" not in github_release
 
 
 def test_merge_ready_docs_job_checks_links():
