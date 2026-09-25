@@ -24,6 +24,7 @@ LEGACY_IDENTITY_ALLOWLIST = {
     "sql_notebook_kit/notebook.py",
     "sql_notebook_kit/results.py",
     "sql_notebook_kit/labextension/static/949.ffead9a0c26c08af.js",
+    "tests/test_release_contract.py",
 }
 
 
