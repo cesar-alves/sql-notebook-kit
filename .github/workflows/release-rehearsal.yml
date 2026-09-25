@@ -98,7 +98,11 @@ jobs:
       - run: uv run twine check --strict release/python/*
       - run: uv run python scripts/check_artifacts.py release/python
       - run: uv run python scripts/build_from_sdist.py release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}.tar.gz --expected-version ${{ needs.verify-source.outputs.version }} --output /tmp/sdist-wheel
-      - run: uv run python scripts/isolated_install.py release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}-py3-none-any.whl --expected-version ${{ needs.verify-source.outputs.version }}
+      - run: >-
+          uv run python scripts/isolated_install.py
+          release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}-py3-none-any.whl
+          --sdist release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}.tar.gz
+          --expected-version ${{ needs.verify-source.outputs.version }}
       - run: uvx --from pip-licenses==5.5.5 pip-licenses --python=.venv/bin/python --format=json --with-urls --output-file=release/evidence/python-licenses.json
       - run: pnpm licenses list --json > release/evidence/javascript-licenses.json
       - run: uv run python scripts/check_license_report.py --ecosystem pypi --report release/evidence/python-licenses.json

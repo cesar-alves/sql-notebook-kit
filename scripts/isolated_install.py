@@ -9,6 +9,7 @@ import os
 import re
 import stat
 import subprocess
+import tarfile
 import tempfile
 import venv
 from pathlib import Path
@@ -24,14 +25,90 @@ def _venv_commands(root: Path) -> tuple[Path, Path]:
     return python, command
 
 
+def _execute_examples(
+    python: Path,
+    smoke_directory: Path,
+    environment: dict[str, str],
+    sdist: Path,
+) -> None:
+    notebook_command = python.with_name(
+        "jupyter-nbconvert.exe" if os.name == "nt" else "jupyter-nbconvert"
+    )
+    quickstart = smoke_directory / "quickstart.ipynb"
+    duckdb_sample = smoke_directory / "duckdb.ipynb"
+    with tarfile.open(sdist, "r:gz") as archive:
+        for name, destination in (
+            ("quickstart.ipynb", quickstart),
+            ("duckdb.ipynb", duckdb_sample),
+        ):
+            matches = [
+                member
+                for member in archive.getmembers()
+                if member.isfile() and member.name.endswith(f"/examples/{name}")
+            ]
+            assert len(matches) == 1, f"sdist must contain exactly one examples/{name}"
+            archived_notebook = archive.extractfile(matches[0])
+            assert archived_notebook is not None
+            destination.write_bytes(archived_notebook.read())
+
+    database = smoke_directory / "documented-example.duckdb"
+    subprocess.run(
+        [
+            str(python),
+            "-c",
+            (
+                "import duckdb, sys; "
+                "connection = duckdb.connect(sys.argv[1]); "
+                "connection.execute("
+                '"create table sample_items as select 1 as item_id, \'alpha\' as label"'
+                "); "
+                "connection.close()"
+            ),
+            str(database),
+        ],
+        cwd=smoke_directory,
+        check=True,
+        env=environment,
+    )
+    notebook_environment = dict(environment)
+    notebook_environment["DUCK_DB_SOURCE"] = str(database)
+
+    for source, output in (
+        (quickstart, "executed-quickstart.ipynb"),
+        (duckdb_sample, "executed-duckdb.ipynb"),
+    ):
+        subprocess.run(
+            [
+                str(notebook_command),
+                "--to",
+                "notebook",
+                "--execute",
+                str(source),
+                "--output",
+                output,
+                "--output-dir",
+                str(smoke_directory),
+                "--ExecutePreprocessor.timeout=120",
+            ],
+            cwd=smoke_directory,
+            check=True,
+            env=notebook_environment,
+        )
+        assert (smoke_directory / output).is_file()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("wheel", type=Path)
+    parser.add_argument("--sdist", required=True, type=Path)
     parser.add_argument("--expected-version", required=True)
     args = parser.parse_args()
     wheel = args.wheel.resolve()
+    sdist = args.sdist.resolve()
     if not wheel.is_file() or wheel.suffix != ".whl":
         parser.error("wheel must be an existing .whl file")
+    if not sdist.is_file() or not sdist.name.endswith(".tar.gz"):
+        parser.error("sdist must be an existing .tar.gz file")
     if not VERSION_PATTERN.fullmatch(args.expected_version):
         parser.error("expected version must be a normalized release version")
 
@@ -48,7 +125,16 @@ def main() -> int:
         # Both user-controlled values were constrained above; each remains one argv
         # element, and subprocess never invokes a shell.
         subprocess.run(
-            [str(python), "-m", "pip", "install", requirement, "jupyterlab>=4,<5"],  # nosemgrep
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                requirement,
+                "jupyterlab>=4,<5",
+                "nbconvert>=7,<8",
+                "ipykernel>=6",
+            ],  # nosemgrep
             check=True,
             env=restricted_environment,
         )
@@ -74,6 +160,7 @@ def main() -> int:
             check=True,
             env=restricted_environment,
         )
+        _execute_examples(python, smoke_directory, restricted_environment, sdist)
 
         if os.name != "nt":
             state = root / "editor-state.json"

@@ -113,3 +113,14 @@ def test_local_validation_executes_the_credential_free_quickstart():
 
     assert "--execute examples/quickstart.ipynb" in validation
     assert "/tmp/sql-notebook-kit-quickstart.ipynb" in validation
+
+
+def test_isolated_wheel_validation_executes_both_documented_notebooks():
+    validation = (ROOT / "scripts" / "isolated_install.py").read_text()
+
+    assert 'parser.add_argument("--sdist", required=True' in validation
+    assert 'member.name.endswith(f"/examples/{name}")' in validation
+    assert 'notebook_environment["DUCK_DB_SOURCE"]' in validation
+    assert '"--execute"' in validation
+    assert '"executed-quickstart.ipynb"' in validation
+    assert '"executed-duckdb.ipynb"' in validation
