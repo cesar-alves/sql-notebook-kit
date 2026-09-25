@@ -1,0 +1,34 @@
+name: Bug report
+description: Report reproducible incorrect behavior without sensitive data.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private SQL, notebook output, or internal identifiers.
+  - type: input
+    id: version
+    attributes:
+      label: SQL Notebook Kit version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: frontend
+    attributes:
+      label: Frontend
+      options: ["JupyterLab 4", "VS Code", "Python only"]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Sanitized reproduction
+      description: Include the smallest safe example and exact observed/expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation performed
+      description: List clean-environment or upgrade checks already attempted.

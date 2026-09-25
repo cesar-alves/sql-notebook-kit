@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.1.0
+All notable changes are recorded here. The format follows Keep a Changelog and the
+project uses Semantic Versioning under its [alpha versioning policy](docs/versioning.md).
+
+## [Unreleased]
+
+### Security
+
+- No unreleased security changes.
+
+## [0.1.0] - 2026-08-22
+
+0.1.0 is an API-unstable alpha. DuckDB is certified; Redshift, Databricks, and
+BigQuery remain preview backends pending live credential-backed release suites.
+
+### Added
 
 - Make `ipykernel` and `jupyter-client` core runtime dependencies so clean pip
   installations can be selected directly as Jupyter and VS Code kernels.
@@ -59,3 +73,17 @@
   package using the shared revisioned persistence protocol.
 - Declare `nbformat` in the visualization extras so Plotly graphs render through
   the notebook MIME path in clean kernel environments.
+
+### Security
+
+- Reject secret-bearing named-profile fields and keep authentication inside
+  user-supplied or built-in connection factories.
+- Bound eager and lazy results before transferring them to visualization surfaces.
+
+### Deprecated
+
+- Nothing is deprecated in the first alpha. Future removals of advertised APIs will
+  be called out in release notes even before 1.0.
+
+[Unreleased]: https://github.com/cesar-alves/sql-notebook-kit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cesar-alves/sql-notebook-kit/releases/tag/v0.1.0

@@ -1,10 +1,20 @@
 {
   "name": "sql-notebook-kit-vscode",
   "displayName": "SQL Notebook Kit Visualizations",
+  "description": "Metadata, theme, and saved-visualization companion for SQL Notebook Kit notebooks.",
   "version": "0.1.0",
   "publisher": "sql-notebook-kit",
   "license": "MIT",
-  "repository": "https://github.com/cesar-alves/sql-notebook-kit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesar-alves/sql-notebook-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cesar-alves/sql-notebook-kit/issues"
+  },
+  "homepage": "https://cesar-alves.github.io/sql-notebook-kit/",
+  "categories": ["Visualization", "Notebooks"],
+  "keywords": ["sql", "jupyter", "notebook", "duckdb", "visualization"],
   "files": ["dist", "syntaxes", "LICENSE"],
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["workspace"],

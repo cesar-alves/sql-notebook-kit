@@ -18,6 +18,15 @@ PROTOCOL_VERSION = 1
 COMM_TARGET = "sql_notebook_kit.visualizations.v1"
 VSCODE_MIME = "application/vnd.sql-notebook-kit.bridge+json"
 VSCODE_CAPABILITY_TIMEOUT = 45.0
+MAX_BRIDGE_JSON_BYTES = 300_000
+MAX_BRIDGE_BASE64_BYTES = 400_000
+_RESPONSE_OPERATIONS = {
+    "capabilities_result",
+    "load_result",
+    "save_result",
+    "theme_changed",
+    "error",
+}
 _VSCODE_BRIDGES: weakref.WeakValueDictionary[str, VscodePersistenceBridge] = (
     weakref.WeakValueDictionary()
 )
@@ -51,6 +60,36 @@ class _ThemeSupport:
             listener(self.theme)
 
 
+def _valid_response_message(
+    message: Any, *, expected_session: str, expected_cell: str
+) -> bool:
+    if not isinstance(message, dict):
+        return False
+    request_id = message.get("request_id")
+    session_id = message.get("session_id")
+    cell_id = message.get("cell_id")
+    operation = message.get("operation")
+    payload = message.get("payload")
+    if not (
+        message.get("protocol_version") == PROTOCOL_VERSION
+        and isinstance(request_id, str)
+        and len(request_id) <= 80
+        and session_id == expected_session
+        and isinstance(session_id, str)
+        and len(session_id) <= 80
+        and cell_id == expected_cell
+        and isinstance(cell_id, str)
+        and len(cell_id) <= 4096
+        and operation in _RESPONSE_OPERATIONS
+        and isinstance(payload, dict)
+    ):
+        return False
+    try:
+        return len(json.dumps(message).encode("utf-8")) <= MAX_BRIDGE_JSON_BYTES
+    except (TypeError, ValueError):
+        return False
+
+
 class CommPersistenceBridge(_ThemeSupport):
     """Synchronous JupyterLab request facade over a kernel comm."""
 
@@ -79,9 +118,9 @@ class CommPersistenceBridge(_ThemeSupport):
 
     def _on_message(self, message: dict[str, Any]) -> None:
         data = message.get("content", {}).get("data", {})
-        if not isinstance(data, dict):
-            return
-        if data.get("session_id") != self.session_id:
+        if not _valid_response_message(
+            data, expected_session=self.session_id, expected_cell=self.cell_id
+        ):
             return
         if data.get("operation") == "theme_changed":
             self._receive_theme(data.get("payload", {}))
@@ -233,18 +272,18 @@ class VscodePersistenceBridge(_ThemeSupport):
 def _deliver_vscode_response(encoded: str) -> None:
     """Receive a trusted callback emitted through the stable VS Code Jupyter API."""
     try:
+        if not isinstance(encoded, str) or len(encoded) > MAX_BRIDGE_BASE64_BYTES:
+            return
         message = json.loads(base64.b64decode(encoded, validate=True).decode("utf-8"))
-        if not isinstance(message, dict):
-            return
-        if message.get("protocol_version") != PROTOCOL_VERSION:
-            return
         session_id = message.get("session_id")
         if not isinstance(session_id, str):
             return
         bridge = _VSCODE_BRIDGES.get(session_id)
-        if bridge is not None:
+        if bridge is not None and _valid_response_message(
+            message, expected_session=bridge.session_id, expected_cell=bridge.cell_id
+        ):
             bridge._receive(message)
-    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+    except (AttributeError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
         return
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 import types
 
@@ -7,7 +8,8 @@ import pytest
 
 from sql_notebook_kit import BackendCapabilities, SQLNotebookKitError, create_session
 from sql_notebook_kit.adapters import create_builtin_adapter
-from sql_notebook_kit.errors import ConfigurationError
+from sql_notebook_kit.adapters.builtins import _open_transform_session
+from sql_notebook_kit.errors import ConfigurationError, MissingOptionalDependencyError
 
 
 def test_public_capability_type_is_immutable():
@@ -42,6 +44,57 @@ def test_cloud_adapters_start_in_preview_without_connecting(backend):
     }[backend]
     adapter = create_builtin_adapter(backend, kwargs)
     assert adapter.capabilities.support_level == "preview"
+
+
+@pytest.mark.parametrize(
+    ("backend", "kwargs", "module", "extra"),
+    [
+        ("duckdb", {}, "duckdb_engine", "[duckdb]"),
+        ("redshift", {}, "redshift_connector", "[redshift]"),
+        (
+            "databricks",
+            {"server_hostname": "<host>", "http_path": "<path>"},
+            "databricks",
+            "[databricks]",
+        ),
+        ("bigquery", {"project_id": "<project>"}, "google.cloud", "[bigquery]"),
+    ],
+)
+def test_every_builtin_has_actionable_optional_dependency_failure(
+    monkeypatch, backend, kwargs, module, extra
+):
+    monkeypatch.setitem(sys.modules, module, None)
+    adapter = create_builtin_adapter(backend, kwargs)
+    with pytest.raises(MissingOptionalDependencyError, match=re.escape(extra)):
+        adapter.connection_factory()
+
+
+def test_builtin_adapter_repr_never_exposes_connection_values():
+    secret = "usable-secret-value"
+    adapter = create_builtin_adapter(
+        "databricks",
+        {"server_hostname": "<host>", "http_path": "<path>", "access_token": secret},
+    )
+    assert secret not in repr(adapter)
+    assert secret not in repr(adapter.factory_spec)
+
+
+def test_failed_transform_construction_closes_the_new_connection():
+    class Connection:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    connection = Connection()
+
+    class BrokenSession:
+        def __init__(self, **_kwargs):
+            raise RuntimeError("construction failed")
+
+    with pytest.raises(RuntimeError, match="construction failed"):
+        _open_transform_session(BrokenSession, lambda: connection)
+    assert connection.closed
 
 
 def test_databricks_rejects_jobs_compute():

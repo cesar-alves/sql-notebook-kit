@@ -1,0 +1,256 @@
+name: Pull request CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, labeled, unlabeled]
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  compact-linux:
+    name: CI / compact Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: uv sync --frozen --group docs --group frontend
+      - run: pnpm install --frozen-lockfile
+      - run: uv run ruff check .
+      - run: uv run mypy sql_notebook_kit
+      - run: uv run pytest --cov=sql_notebook_kit --cov-branch --cov-report=term-missing
+      - run: pnpm check
+      - run: pnpm test
+      - run: uv run --group docs mkdocs build --strict
+      - run: uv run python scripts/check_notebooks.py
+      - name: Require a changelog entry for user-facing changes
+        env:
+          RELEASE_NOTE_EXEMPT: ${{ contains(github.event.pull_request.labels.*.name, 'release-note:exempt') }}
+        run: >-
+          uv run python scripts/check_release_notes.py
+          --base '${{ github.event.pull_request.base.sha }}'
+      - name: Enforce main release branch and manifest policy
+        run: >-
+          uv run python scripts/release_policy.py pr
+          --base '${{ github.base_ref }}'
+          --head '${{ github.head_ref }}'
+      - name: Require merge-ready authorization before review
+        env:
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          if [ "$IS_DRAFT" = "true" ]; then exit 0; fi
+          echo "$LABELS" | jq -e 'index("ci:merge-ready") != null' >/dev/null || {
+            echo "A non-draft pull request requires the ci:merge-ready label." >&2
+            exit 1
+          }
+
+  python-compatibility:
+    name: CI / Python ${{ matrix.python }}
+    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --frozen
+      - run: uv run pytest
+
+  frontend-docs-depth:
+    name: CI / frontend and docs depth
+    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: uv sync --frozen --group docs --group frontend
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:artifacts
+      - run: git diff --exit-code -- sql_notebook_kit/labextension sql_notebook_kit/vscode
+      - run: uv run playwright install --with-deps chromium
+      - name: Run browser-level JupyterLab release smoke
+        env:
+          SQL_NOTEBOOK_KIT_BROWSER_SMOKE: "1"
+        run: uv run pytest tests/test_jupyterlab_browser_smoke.py -q
+      - run: uv run --group docs mkdocs build --strict
+      - name: Check documentation links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
+        with:
+          args: >-
+            --offline --root-dir "${{ github.workspace }}" --no-progress --verbose
+            --exclude-path node_modules --exclude-path site './**/*.md'
+          fail: true
+          failIfEmpty: true
+      - run: uv run pytest tests/test_documentation_safety.py tests/test_notebook_validation.py
+
+  packaging:
+    name: CI / packaging
+    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: uv sync --frozen
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:artifacts
+      - run: uv build
+      - run: uv run twine check --strict dist/*
+      - run: uv run python scripts/check_artifacts.py dist
+      - run: uv run python scripts/build_from_sdist.py dist/sql_notebook_kit-0.1.0.tar.gz --expected-version 0.1.0 --output /tmp/sdist-wheel
+      - run: uv run python scripts/isolated_install.py dist/sql_notebook_kit-0.1.0-py3-none-any.whl --expected-version 0.1.0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-python-distributions
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+
+  platform-smoke:
+    name: CI / ${{ matrix.name }} wheel smoke
+    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    needs: packaging
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            python: "3.13"
+          - name: Windows
+            os: windows-latest
+            python: "3.13"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: ci-python-distributions
+          path: dist
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install the exact wheel with its DuckDB and visualization dependencies
+        run: >-
+          python -m pip install
+          dist/sql_notebook_kit-0.1.0-py3-none-any.whl
+          duckdb duckdb-engine pandas 'sqlframe[duckdb]'
+          ipywidgets nbformat plotly jupyterlab
+      - run: python scripts/installed_smoke.py --expected-version 0.1.0
+
+  security:
+    name: CI / security and licenses
+    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Scan full Git history with Gitleaks v8.29.0
+        run: >-
+          docker run --rm --platform linux/amd64
+          --volume "${{ github.workspace }}:/repo:ro"
+          ghcr.io/gitleaks/gitleaks@sha256:507de9682470025fb3e7f57fe4c4ca8263d81369e027b6538b8a252a9c0371d4
+          git --no-banner --redact /repo
+      - name: Prove Gitleaks rejects a synthetic test secret
+        run: |
+          probe=$(mktemp -d)
+          printf 'AWS_ACCESS_KEY_ID=%s%s\n' 'AKIA' 'ABCDEFGHIJKLMNOP' > "$probe/fixture.env"
+          if docker run --rm --platform linux/amd64 \
+            --volume "$probe:/probe:ro" \
+            ghcr.io/gitleaks/gitleaks@sha256:507de9682470025fb3e7f57fe4c4ca8263d81369e027b6538b8a252a9c0371d4 \
+            dir --no-banner --redact /probe; then
+            echo "::error::Gitleaks accepted the synthetic secret fixture"
+            exit 1
+          fi
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+      - run: uv sync --frozen --all-extras
+      - run: pnpm install --frozen-lockfile
+      - run: uv export --frozen --all-extras --no-dev --no-emit-project --output-file /tmp/runtime-requirements.txt
+      - run: uvx --from pip-audit==2.10.1 pip-audit --requirement /tmp/runtime-requirements.txt
+      - run: uvx --from semgrep==1.172.0 semgrep scan --config p/python --config p/typescript --error
+      - run: pnpm audit --audit-level high
+      - run: uvx --from pip-licenses==5.5.5 pip-licenses --python=.venv/bin/python --format=json --with-urls --output-file=python-licenses.json
+      - run: pnpm licenses list --json > javascript-licenses.json
+      - run: uv run python scripts/check_license_report.py --ecosystem pypi --report python-licenses.json
+      - run: uv run python scripts/check_license_report.py --ecosystem npm --report javascript-licenses.json
+      - run: uv run python scripts/license_report_to_sbom.py --ecosystem pypi --report python-licenses.json --project-version 0.1.0 --output python.cdx.json
+      - run: uv run python scripts/license_report_to_sbom.py --ecosystem npm --report javascript-licenses.json --project-version 0.1.0 --output javascript.cdx.json
+      - run: uvx --from check-jsonschema==0.38.0 check-jsonschema --schemafile https://cyclonedx.org/schema/bom-1.6.schema.json python.cdx.json javascript.cdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: ci-security-license-reports
+          path: |
+            python.cdx.json
+            javascript.cdx.json
+          retention-days: 7

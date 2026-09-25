@@ -1,0 +1,12 @@
+# Reviewed exceptions to package-manager license metadata. This is evidence of
+# metadata triage, not a substitute for maintainer/legal release sign-off.
+
+[overrides]
+"khroma" = "MIT"
+"@vscode/vsce-sign" = "Microsoft Visual Studio Tools License (build-only)"
+"@vscode/vsce-sign-linux-x64" = "Microsoft Visual Studio Tools License (build-only)"
+
+[rationale]
+"khroma" = "Package metadata omits the license field; its installed license file is MIT."
+"@vscode/vsce-sign" = "Used only by the VSIX packaging tool and absent from shipped artifacts. Its installed license restricts redistribution, so it must remain build-only."
+"@vscode/vsce-sign-linux-x64" = "Platform helper for the build-only VSIX signing package; absent from shipped artifacts and not redistributed."

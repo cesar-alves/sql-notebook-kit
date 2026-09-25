@@ -1,11 +1,11 @@
-# Visualization workspace specification
+# Visualization workspace architecture
 
 ## Status and objective
 
-This document specifies the next visualization system for `sql-notebook-kit`.
-It replaces the current single-chart editor with a bounded, metadata-backed
+This document describes the visualization system implemented in `sql-notebook-kit`
+0.1.0. It replaced the earlier single-chart editor with a bounded, metadata-backed
 workspace inspired by the authoring experience of Databricks notebooks. The
-goal is not pixel-for-pixel parity. The goal is a predictable notebook workflow
+implementation goal is not pixel-for-pixel parity. It provides a predictable notebook workflow
 in which a user can create multiple named visualizations, select a chart type,
 and configure only the fields and options that are meaningful for that chart.
 
@@ -14,12 +14,12 @@ on the detached `NotebookResult.dataframe`; it must never rewrite, rerun, or
 silently increase the cost of the source SQL query. When a result is truncated,
 every visualization must say that its transformations exclude unfetched rows.
 
-This is a clean replacement of the alpha `ChartSpec` interface. Compatibility
+This was a clean replacement of the pre-release `ChartSpec` interface. Compatibility
 with serialized or constructed instances of the old type is not required.
 
-### Success criteria
+### Implemented contract
 
-The feature is complete when:
+The 0.1.0 implementation provides:
 
 1. A SQL result initially shows its bounded table and an **Add visualization**
    action.
@@ -39,9 +39,9 @@ The feature is complete when:
    light, dark, and high-contrast theme changes without saving presentation
    state into the notebook.
 
-## Existing system
+## Replaced system (historical context)
 
-The current implementation is concentrated in
+The replaced implementation was concentrated in
 `sql_notebook_kit/visualize.py` and `sql_notebook_kit/results.py`. It has
 eight chart types, a flat frozen `ChartSpec`, one optional filter, one global
 aggregation, and a fixed row of ipywidgets. Every widget is displayed for every
