@@ -30,6 +30,7 @@ FORBIDDEN_PARTS = {
 }
 LOCAL_PATH = re.compile(rb"(?:/home/[^/\s]+/|/Users/[^/\s]+/|[A-Za-z]:\\Users\\)")
 WHEEL_PACKAGE_SUFFIXES = (".py", ".css", ".vsix")
+FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 SDIST_ROOT_FILES = {
     ".node-version",
     ".python-version",
@@ -49,6 +50,7 @@ SDIST_ROOT_FILES = {
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
     "pyproject.toml",
+    "scripts/normalize_vsix.py",
     "uv.lock",
 }
 
@@ -92,7 +94,8 @@ def _sdist_allowed(name: str) -> bool:
 
 def _check_vscode(archive: zipfile.ZipFile, *, expected_version: str) -> list[str]:
     errors: list[str] = []
-    names = set(archive.namelist())
+    ordered_names = archive.namelist()
+    names = set(ordered_names)
     required = {
         "[Content_Types].xml",
         "extension.vsixmanifest",
@@ -122,6 +125,12 @@ def _check_vscode(archive: zipfile.ZipFile, *, expected_version: str) -> list[st
     unexpected = names - required
     if unexpected:
         errors.append(f"VSIX contains files outside its allowlist: {', '.join(sorted(unexpected))}")
+    if ordered_names != sorted(ordered_names):
+        errors.append("VSIX entries are not in deterministic order")
+    if any(info.date_time != FIXED_ZIP_TIMESTAMP for info in archive.infolist()):
+        errors.append("VSIX entries do not use the deterministic timestamp")
+    if any(info.compress_type != zipfile.ZIP_STORED for info in archive.infolist()):
+        errors.append("VSIX entries do not use deterministic stored encoding")
     return errors
 
 
@@ -197,6 +206,7 @@ def check_sdist(path: Path, *, expected_version: str) -> list[str]:
             "uv.lock",
             "hatch_build.py",
             "pnpm-lock.yaml",
+            "scripts/normalize_vsix.py",
             "frontend/vscode/package.json",
             "frontend/protocol/LICENSE",
             "sql_notebook_kit/labextension/static/third-party-licenses.json",

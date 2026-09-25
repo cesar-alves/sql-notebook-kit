@@ -32,6 +32,7 @@
   },
   "jupyterlab": {
     "extension": true,
-    "outputDir": "../../sql_notebook_kit/labextension"
+    "outputDir": "../../sql_notebook_kit/labextension",
+    "webpackConfig": "webpack.config.cjs"
   }
 }

@@ -17,9 +17,10 @@ frontend build sources. Installing this wheel never invokes Node.js or pnpm.
 The sdist contains Python sources, build metadata and hook, root license/readme/
 changelog, user documentation and sanitized examples, pnpm lock/workspace manifests,
 frontend sources, and the staged JupyterLab and VS Code artifacts needed to build a
-wheel without a frontend toolchain. It excludes tests, `.env`, `local/`, VCS data,
-caches, `dist/`, `site/`, `node_modules/`, raw package-manager VSIX output, and local
-frontend output.
+wheel without a frontend toolchain. The single included build utility normalizes VSIX
+ZIP metadata so rebuilding in different checkout paths produces identical frontend
+artifacts. It excludes tests, `.env`, `local/`, VCS data, caches, `dist/`, `site/`,
+`node_modules/`, raw package-manager VSIX output, and local frontend output.
 
 ## Frontend artifacts
 

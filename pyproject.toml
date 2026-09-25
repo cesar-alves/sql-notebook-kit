@@ -164,6 +164,7 @@ include = [
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
+    "scripts/normalize_vsix.py",
     "uv.lock",
     "frontend/**/*",
     "!frontend/**/node_modules/**/*",

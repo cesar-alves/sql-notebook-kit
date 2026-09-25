@@ -8,3 +8,8 @@ copyFileSync(
 
 const generatedStyle = resolve('sql_notebook_kit/labextension/static/style.js');
 writeFileSync(generatedStyle, `${readFileSync(generatedStyle, 'utf8').trimEnd()}\n`);
+
+const generatedManifest = resolve('sql_notebook_kit/labextension/package.json');
+const manifest = JSON.parse(readFileSync(generatedManifest, 'utf8'));
+delete manifest.jupyterlab.webpackConfig;
+writeFileSync(generatedManifest, `${JSON.stringify(manifest, null, 2)}\n`);
