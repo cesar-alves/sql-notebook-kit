@@ -104,7 +104,9 @@ def test_frontend_builds_are_configured_for_checkout_path_independence():
 
     assert "moduleIds: 'natural'" in webpack
     assert "chunkIds: 'natural'" in webpack
-    assert "scripts/normalize_vsix.py" in scripts["package:vscode"]
+    assert "uv run --no-project python scripts/normalize_vsix.py" in (
+        scripts["package:vscode"]
+    )
 
 
 def test_vscode_tests_build_the_protocol_workspace_first():

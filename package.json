@@ -8,7 +8,7 @@
     "build:jupyterlab": "uv run --group frontend jupyter labextension build frontend/jupyterlab && node frontend/jupyterlab/copy-install.mjs",
     "check": "pnpm -r check",
     "test": "pnpm -r test",
-    "package:vscode": "pnpm --filter sql-notebook-kit-vscode package && uv run python scripts/normalize_vsix.py frontend/vscode/sql-notebook-kit-vscode-0.1.0.vsix && node frontend/vscode/stage.mjs"
+    "package:vscode": "pnpm --filter sql-notebook-kit-vscode package && uv run --no-project python scripts/normalize_vsix.py frontend/vscode/sql-notebook-kit-vscode-0.1.0.vsix && node frontend/vscode/stage.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.2",
