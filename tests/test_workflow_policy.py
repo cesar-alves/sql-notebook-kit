@@ -110,3 +110,14 @@ def test_platform_smokes_install_the_shipped_visualization_stack():
     assert "lets-plot" not in workflow
     assert "ipywidgets nbformat plotly jupyterlab" in workflow
     assert "'sqlframe[duckdb]'" in workflow
+
+
+def test_merge_ready_and_release_jobs_execute_the_public_quickstart():
+    command = "--execute examples/quickstart.ipynb"
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    rehearsal = (ROOT / ".github" / "workflows" / "release-rehearsal.yml").read_text()
+
+    assert command in ci
+    assert command in rehearsal
+    assert "/tmp/sql-notebook-kit-quickstart.ipynb" in ci
+    assert "/tmp/sql-notebook-kit-quickstart.ipynb" in rehearsal

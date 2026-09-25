@@ -85,6 +85,12 @@ jobs:
       - run: uv sync --frozen --all-extras
       - run: pnpm install --frozen-lockfile
       - run: uv run python scripts/check_notebooks.py
+      - name: Execute the credential-free quickstart
+        run: >-
+          uv run --group frontend jupyter nbconvert
+          --to notebook --execute examples/quickstart.ipynb
+          --output /tmp/sql-notebook-kit-quickstart.ipynb
+          --ExecutePreprocessor.timeout=120
       - run: pnpm check && pnpm test && pnpm build:artifacts
       - run: git diff --exit-code -- sql_notebook_kit/labextension sql_notebook_kit/vscode
       - run: mkdir -p release/python release/assets release/evidence

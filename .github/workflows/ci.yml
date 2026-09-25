@@ -118,6 +118,12 @@ jobs:
           SQL_NOTEBOOK_KIT_BROWSER_SMOKE: "1"
         run: uv run pytest tests/test_jupyterlab_browser_smoke.py -q
       - run: uv run --group docs mkdocs build --strict
+      - name: Execute the credential-free quickstart
+        run: >-
+          uv run --group frontend jupyter nbconvert
+          --to notebook --execute examples/quickstart.ipynb
+          --output /tmp/sql-notebook-kit-quickstart.ipynb
+          --ExecutePreprocessor.timeout=120
       - name: Check documentation links
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
         with:

@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -20,10 +21,15 @@ def test_documentation_contains_no_real_infrastructure_identifiers(path):
     assert not violations, f"{path.relative_to(ROOT)} contains: {', '.join(violations)}"
 
 
-def test_quickstart_contains_only_placeholder_identity_values():
-    text = (ROOT / "examples" / "quickstart.ipynb").read_text()
+def test_quickstart_is_credential_free_and_uses_the_certified_backend():
+    notebook = json.loads((ROOT / "examples" / "quickstart.ipynb").read_text())
+    text = "\n".join(
+        cell["source"] if isinstance(cell["source"], str) else "".join(cell["source"])
+        for cell in notebook["cells"]
+    )
     for pattern in FORBIDDEN_PATTERNS.values():
         assert pattern.search(text) is None
-    assert "<aws-account-id>" in text
-    assert "<role-name>" in text
-    assert "<user-email>" in text
+    assert "<" not in text
+    assert 'backend="duckdb"' in text
+    assert '"database": ":memory:"' in text
+    assert "needs no credentials or external data" in text
