@@ -104,3 +104,12 @@ def test_frontend_builds_are_configured_for_checkout_path_independence():
     assert "moduleIds: 'natural'" in webpack
     assert "chunkIds: 'natural'" in webpack
     assert "scripts/normalize_vsix.py" in scripts["package:vscode"]
+
+
+def test_vscode_tests_build_the_protocol_workspace_first():
+    root = Path(__file__).parents[1]
+    manifest = json.loads((root / "frontend" / "vscode" / "package.json").read_text())
+
+    assert manifest["scripts"]["pretest"] == (
+        "pnpm --filter @sql-notebook-kit/protocol build"
+    )

@@ -55,6 +55,7 @@
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.cjs && esbuild src/renderer.ts --bundle --platform=browser --format=esm --outfile=dist/renderer.js && esbuild src/widgetFallback.ts --bundle --platform=browser --format=esm --outfile=dist/widgetFallback.js",
     "check": "tsc -p tsconfig.json --noEmit",
+    "pretest": "pnpm --filter @sql-notebook-kit/protocol build",
     "test": "pnpm build && vitest run",
     "package": "vsce package --no-dependencies"
   },
