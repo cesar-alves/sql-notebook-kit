@@ -72,6 +72,7 @@ def test_wheel_allowlist_and_alpha_metadata_reject_unexpected_file(tmp_path: Pat
 
 
 def test_sdist_allowlist_is_explicit():
+    assert _sdist_allowed(".gitignore")
     assert _sdist_allowed("docs/index.md")
     assert _sdist_allowed("frontend/vscode/src/extension.ts")
     assert _sdist_allowed("scripts/normalize_vsix.py")
@@ -118,9 +119,16 @@ def test_vscode_tests_build_the_protocol_workspace_first():
     )
 
 
-def test_sdist_configuration_excludes_git_metadata_and_includes_protocol_sources():
+def test_sdist_configuration_force_includes_protocol_sources():
     project = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
-    build = project["tool"]["hatch"]["build"]
+    sdist = project["tool"]["hatch"]["build"]["targets"]["sdist"]
 
-    assert ".gitignore" in build["targets"]["sdist"]["exclude"]
-    assert "frontend/protocol/**/*" in build["include"]
+    assert set(sdist["force-include"].values()) == {
+        "frontend/protocol/LICENSE",
+        "frontend/protocol/package.json",
+        "frontend/protocol/tsconfig.json",
+        "frontend/protocol/src/index.test.ts",
+        "frontend/protocol/src/index.ts",
+        "frontend/protocol/src/tableCopy.test.ts",
+        "frontend/protocol/src/tableCopy.ts",
+    }

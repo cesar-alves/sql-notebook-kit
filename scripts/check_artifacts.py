@@ -32,6 +32,7 @@ LOCAL_PATH = re.compile(rb"(?:/home/[^/\s]+/|/Users/[^/\s]+/|[A-Za-z]:\\Users\\)
 WHEEL_PACKAGE_SUFFIXES = (".py", ".css", ".vsix")
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 SDIST_ROOT_FILES = {
+    ".gitignore",
     ".node-version",
     ".python-version",
     "CHANGELOG.md",

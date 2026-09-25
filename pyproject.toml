@@ -127,10 +127,14 @@ gui = [
     "voila>=0.5,<0.6",
 ]
 
-[tool.hatch.build.targets.sdist]
-exclude = [
-    ".gitignore",
-]
+[tool.hatch.build.targets.sdist.force-include]
+"frontend/protocol/LICENSE" = "frontend/protocol/LICENSE"
+"frontend/protocol/package.json" = "frontend/protocol/package.json"
+"frontend/protocol/tsconfig.json" = "frontend/protocol/tsconfig.json"
+"frontend/protocol/src/index.test.ts" = "frontend/protocol/src/index.test.ts"
+"frontend/protocol/src/index.ts" = "frontend/protocol/src/index.ts"
+"frontend/protocol/src/tableCopy.test.ts" = "frontend/protocol/src/tableCopy.test.ts"
+"frontend/protocol/src/tableCopy.ts" = "frontend/protocol/src/tableCopy.ts"
 
 [tool.hatch.build.targets.wheel]
 packages = ["sql_notebook_kit"]
@@ -171,7 +175,6 @@ include = [
     "pnpm-workspace.yaml",
     "scripts/normalize_vsix.py",
     "uv.lock",
-    "frontend/protocol/**/*",
     "frontend/**/*",
     "!frontend/**/node_modules/**/*",
 ]
