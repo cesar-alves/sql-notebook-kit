@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import tomllib
 import zipfile
 from pathlib import Path
 
@@ -113,3 +114,11 @@ def test_vscode_tests_build_the_protocol_workspace_first():
     assert manifest["scripts"]["pretest"] == (
         "pnpm --filter @sql-notebook-kit/protocol build"
     )
+
+
+def test_sdist_configuration_excludes_git_metadata_and_includes_protocol_sources():
+    project = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    build = project["tool"]["hatch"]["build"]
+
+    assert ".gitignore" in build["targets"]["sdist"]["exclude"]
+    assert "frontend/protocol/**/*" in build["include"]
