@@ -63,6 +63,8 @@ BigQuery remain preview backends pending live credential-backed release suites.
 - Require pandas 3.0.5 or newer for visualization and cover pandas 3 dtype,
   copy-on-write, aggregation, export, and rendering behavior.
 - Add reusable factory contract testing, public API documentation, and package quality gates.
+- Add a credential-free in-memory DuckDB quickstart that is executed during local,
+  merge-ready, and signed-tag validation.
 - Roll back failed managed `%%sql` transactions so one SQL error does not poison
   the rest of the notebook session.
 - Replace the alpha single-chart editor with a registry-backed workspace for
@@ -79,6 +81,8 @@ BigQuery remain preview backends pending live credential-backed release suites.
 - Reject secret-bearing named-profile fields and keep authentication inside
   user-supplied or built-in connection factories.
 - Bound eager and lazy results before transferring them to visualization surfaces.
+- Pin patched frontend build and test dependencies so the locked pnpm graph has no
+  known vulnerabilities at release-candidate audit time.
 
 ### Deprecated
 
