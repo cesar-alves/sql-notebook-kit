@@ -13,6 +13,7 @@ __pycache__/
 htmlcov/
 dist/
 site/
+/release/
 node_modules/
 frontend/*/lib/
 frontend/*/dist/

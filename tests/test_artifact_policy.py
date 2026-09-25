@@ -132,3 +132,9 @@ def test_sdist_configuration_force_includes_protocol_sources():
         "frontend/protocol/src/tableCopy.test.ts",
         "frontend/protocol/src/tableCopy.ts",
     }
+
+
+def test_local_release_bundle_is_ignored():
+    ignore_rules = (Path(__file__).parents[1] / ".gitignore").read_text().splitlines()
+
+    assert "/release/" in ignore_rules
