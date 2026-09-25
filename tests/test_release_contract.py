@@ -23,7 +23,7 @@ LEGACY_IDENTITY_ALLOWLIST = {
     "frontend/vscode/src/cellMetadata.test.ts",
     "sql_notebook_kit/notebook.py",
     "sql_notebook_kit/results.py",
-    "sql_notebook_kit/labextension/static/949.ffead9a0c26c08af.js",
+    "sql_notebook_kit/labextension/static/2.b83edde8c1678fda.js",
     "tests/test_release_contract.py",
 }
 
