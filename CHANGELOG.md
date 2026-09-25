@@ -9,7 +9,7 @@ project uses Semantic Versioning under its [alpha versioning policy](docs/versio
 
 - No unreleased security changes.
 
-## [0.1.0] - 2026-08-22
+## [0.1.0] - 2026-09-25
 
 0.1.0 is an API-unstable alpha. DuckDB is certified; Redshift, Databricks, and
 BigQuery remain preview backends pending live credential-backed release suites.
