@@ -15,7 +15,8 @@ make it public only after post-publication verification.
    contract.
 2. Create `release/vX.Y.Z` from protected `develop` (or `hotfix/vX.Y.Z` from protected
    `main` for an urgent patch). Synchronize every manifest, finalize the dated
-   changelog, rebuild frontend assets, and run `scripts/validate.sh`.
+   changelog, rebuild frontend assets, and run
+   `uv run python scripts/validate.py`.
 3. Open a pull request to `main`, add `ci:merge-ready`, and require all protected
    checks. The release-policy check rejects every other source branch or version.
 4. Complete the manual VS Code and accessibility matrices in the private release

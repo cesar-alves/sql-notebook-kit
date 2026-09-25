@@ -109,10 +109,19 @@ def test_vscode_manifest_has_coherent_embedded_artifact_metadata():
 
 
 def test_local_validation_executes_the_credential_free_quickstart():
-    validation = (ROOT / "scripts" / "validate.sh").read_text()
+    validation = (ROOT / "scripts" / "validate.py").read_text()
 
-    assert "--execute examples/quickstart.ipynb" in validation
-    assert "/tmp/sql-notebook-kit-quickstart.ipynb" in validation
+    assert '"--execute"' in validation
+    assert '"examples/quickstart.ipynb"' in validation
+    assert 'tempfile.TemporaryDirectory(prefix="sql-notebook-kit-validation-")' in validation
+
+
+def test_local_validation_rebuilds_and_checks_frontend_artifacts():
+    validation = (ROOT / "scripts" / "validate.py").read_text()
+
+    assert '["pnpm", "build:artifacts"]' in validation
+    assert '"sql_notebook_kit/labextension"' in validation
+    assert '"sql_notebook_kit/vscode"' in validation
 
 
 def test_isolated_wheel_validation_executes_both_documented_notebooks():

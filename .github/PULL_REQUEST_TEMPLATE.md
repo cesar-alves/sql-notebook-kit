@@ -4,7 +4,7 @@ Describe the user-visible contract or internal change.
 
 ## Validation
 
-- [ ] `scripts/validate.sh`
+- [ ] `uv run python scripts/validate.py`
 - [ ] Generated JupyterLab/VSIX assets were rebuilt when frontend sources changed.
 - [ ] Tracked notebooks have no outputs, counts, local paths, credentials, or local state.
 - [ ] Documentation, compatibility, security, and packaging implications were reviewed.
