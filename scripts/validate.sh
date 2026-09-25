@@ -8,3 +8,7 @@ pnpm check
 pnpm test
 uv run --group docs mkdocs build --strict
 uv run python scripts/check_notebooks.py
+uv run --group frontend jupyter nbconvert \
+  --to notebook --execute examples/quickstart.ipynb \
+  --output /tmp/sql-notebook-kit-quickstart.ipynb \
+  --ExecutePreprocessor.timeout=120

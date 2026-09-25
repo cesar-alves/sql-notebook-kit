@@ -106,3 +106,10 @@ def test_vscode_manifest_has_coherent_embedded_artifact_metadata():
     assert manifest["keywords"]
     assert manifest["repository"]["url"].endswith("sql-notebook-kit.git")
     assert manifest["bugs"]["url"].endswith("/issues")
+
+
+def test_local_validation_executes_the_credential_free_quickstart():
+    validation = (ROOT / "scripts" / "validate.sh").read_text()
+
+    assert "--execute examples/quickstart.ipynb" in validation
+    assert "/tmp/sql-notebook-kit-quickstart.ipynb" in validation
