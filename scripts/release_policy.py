@@ -12,7 +12,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION_PATTERN = r"0|[1-9]\d*(?:\.(?:0|[1-9]\d*)){2}"
+VERSION_PATTERN = r"(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){2}"
 RELEASE_BRANCH = re.compile(rf"^release/v(?P<version>{VERSION_PATTERN})$")
 HOTFIX_BRANCH = re.compile(rf"^hotfix/v(?P<version>{VERSION_PATTERN})$")
 
