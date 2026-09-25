@@ -73,6 +73,20 @@ def test_tag_workflow_cannot_publish_to_production_pypi():
     assert "environment:\n      name: pypi" not in workflow
 
 
+def test_testpypi_smoke_is_retryable_without_republishing():
+    workflow = (ROOT / ".github" / "workflows" / "release-rehearsal.yml").read_text()
+    publish = workflow.split("  publish-testpypi:", 1)[1].split(
+        "  testpypi-smoke:", 1
+    )[0]
+    smoke = workflow.split("  testpypi-smoke:", 1)[1]
+
+    assert "pypa/gh-action-pypi-publish@" in publish
+    assert "pip install" not in publish
+    assert "needs: [verify-source, publish-testpypi]" in smoke
+    assert "pip install" in smoke
+    assert "pypa/gh-action-pypi-publish@" not in smoke
+
+
 def test_production_deploys_versioned_docs_only_after_publish():
     workflow = (ROOT / ".github" / "workflows" / "release-production.yml").read_text()
     assert "needs: [verify-bundle, github-release]" in workflow
