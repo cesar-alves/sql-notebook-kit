@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
+import zipfile
 from collections.abc import Sequence
 from importlib.metadata import version
 from importlib.resources import as_file, files
@@ -28,7 +30,19 @@ def _vsix() -> Path:
             raise RuntimeError(
                 "the installed Python package does not contain the VS Code companion"
             )
-        return Path(path)
+        candidate = Path(path)
+        try:
+            with zipfile.ZipFile(candidate) as archive:
+                manifest = json.loads(archive.read("extension/package.json"))
+            if (
+                manifest.get("publisher") != "sql-notebook-kit"
+                or manifest.get("name") != "sql-notebook-kit-vscode"
+                or manifest.get("version") != version("sql-notebook-kit")
+            ):
+                raise RuntimeError("the bundled VS Code companion manifest is incompatible")
+        except (OSError, KeyError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
+            raise RuntimeError("the bundled VS Code companion is malformed") from exc
+        return candidate
 
 
 def _editor_command(editor: str, override: str | None) -> str:
@@ -95,7 +109,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Not installed for {editor}: {EXTENSION_ID}")
         return 1
     except (RuntimeError, subprocess.CalledProcessError) as exc:
-        detail = exc.stderr.strip() if isinstance(exc, subprocess.CalledProcessError) else str(exc)
+        detail = (
+            f"VS Code CLI failed with exit status {exc.returncode}"
+            if isinstance(exc, subprocess.CalledProcessError)
+            else str(exc)
+        )
         print(f"sql-notebook-kit: {detail}", file=sys.stderr)
         return 2
 

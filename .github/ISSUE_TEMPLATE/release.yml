@@ -1,0 +1,69 @@
+name: Release readiness
+description: Track private evidence and sign-off for a versioned release
+title: "Release vX.Y.Z"
+labels: [release]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste credentials, private contact details, customer data, account
+        identifiers, or raw warehouse output here. Keep access-sensitive evidence in
+        the maintainer's private record and link only sanitized evidence.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Normalized release version, without the leading v.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Release owner
+      description: Named maintainer responsible for the release decision.
+    validations:
+      required: true
+  - type: textarea
+    id: automated
+    attributes:
+      label: Automated evidence
+      description: Link the required CI, packaging, security, browser, and rehearsal runs.
+      value: |
+        - [ ] Python 3.11–3.14 and platform smokes
+        - [ ] Frontend, documentation, and browser lifecycle
+        - [ ] Packaging, exact-artifact install, licenses, SBOMs, and hashes
+        - [ ] Gitleaks, Semgrep, pip-audit, and pnpm audit
+        - [ ] Signed-tag TestPyPI rehearsal
+    validations:
+      required: true
+  - type: textarea
+    id: manual
+    attributes:
+      label: Manual sign-offs
+      description: Record approvers and sanitized references; keep secrets outside the issue.
+      value: |
+        - [ ] VS Code Stable, Insiders, and remote-style matrix
+        - [ ] Accessibility matrix
+        - [ ] Copyright and third-party license approval
+        - [ ] Private security-contact route tested
+        - [ ] PyPI/TestPyPI namespace and OIDC publishers controlled
+        - [ ] Redshift, Databricks, and BigQuery preview results recorded
+        - [ ] Repository remains private
+    validations:
+      required: true
+  - type: textarea
+    id: deferrals
+    attributes:
+      label: P1 deferrals
+      description: For each deferral give owner, rationale, risk, compensating control, and milestone.
+      placeholder: None.
+    validations:
+      required: true
+  - type: textarea
+    id: publication
+    attributes:
+      label: Publication authorization
+      description: Record the signed tag, main merge commit, source run ID, artifact hashes, and named dispatcher.
+    validations:
+      required: true

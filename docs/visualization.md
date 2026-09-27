@@ -18,8 +18,7 @@ changing frontend sources, run:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm build
-pnpm package:vscode
+pnpm build:artifacts
 ```
 
 Then install it into the active VS Code extension host:

@@ -1,5 +1,10 @@
 # sql-notebook-kit
 
+> **Alpha software:** 0.1.0 is an API-unstable alpha. Correctness, credential
+> safety, and packaging are release requirements, but advertised Python APIs
+> and notebook behavior may change before 1.0. Breaking changes are documented
+> in the changelog and follow the [versioning policy](docs/versioning.md).
+
 `sql-notebook-kit` brings portable SQL cells, bounded local results, lazy
 warehouse transformations, and editable charts to JupyterLab and VS Code.
 Built-in adapters cover DuckDB, Amazon Redshift, Databricks SQL, and BigQuery;
@@ -11,7 +16,7 @@ inside the supplied factory only when a physical connection is required.
 ## Install
 
 ```bash
-uv pip install -e '.[duckdb,viz]'
+uv pip install 'sql-notebook-kit[duckdb,viz]==0.1.0'
 ```
 
 Use the resulting environment as the notebook kernel.
@@ -49,7 +54,7 @@ visualization extras in your notebook environment, and open the read-only
 [DuckDB sample notebook](examples/duckdb.ipynb):
 
 ```bash
-uv pip install -e '.[duckdb,viz]'
+uv pip install 'sql-notebook-kit[duckdb,viz]==0.1.0'
 export DUCK_DB_SOURCE=/absolute/path/to/analytics.duckdb
 jupyter lab examples/duckdb.ipynb
 ```
@@ -184,9 +189,30 @@ See the [backend guide](docs/backends.md), [compatibility matrix](docs/compatibi
 and [migration guide](docs/migration.md) for backend-specific configuration,
 support levels, and the intentional clean break from the old package identity.
 
+The base install supplies the notebook kernel and eager SQL path. Optional extras
+are deliberately scoped:
+
+- `duckdb`: the certified DuckDB adapter, lazy transformations, and pandas;
+- `viz`: bounded pandas/Plotly/ipywidgets visualizations;
+- `transform`: SQLFrame transformations for a custom supported connection;
+- `redshift`, `databricks`, and `bigquery`: preview cloud adapters; and
+- `all`: every backend and visualization dependency, intended for compatibility
+  testing rather than ordinary environments because it increases dependency and
+  vulnerability surface area.
+
+SQL Notebook Kit adds no telemetry. Connection and bounded result data remain in
+the kernel process, while versioned visualization configuration may be written to
+notebook cell metadata. SQL and credentials are sent only to the database connection
+that the user configures. See the [security model](docs/security-model.md) for trust
+boundaries and residual risks.
+
 ## Development
 
+Editable installation is for contributors:
+
 ```bash
+uv sync --all-groups
+uv pip install -e '.[duckdb,viz]'
 uv run pytest
 uv run ruff check .
 uv run mypy sql_notebook_kit

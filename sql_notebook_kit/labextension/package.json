@@ -38,7 +38,7 @@
     "extension": true,
     "outputDir": "../../sql_notebook_kit/labextension",
     "_build": {
-      "load": "static/remoteEntry.d2421fff069775a5.js",
+      "load": "static/remoteEntry.a1c261f369dc397e.js",
       "extension": "./extension"
     }
   }

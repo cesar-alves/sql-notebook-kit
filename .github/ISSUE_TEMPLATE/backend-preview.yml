@@ -1,0 +1,25 @@
+name: Preview backend report
+description: Share a sanitized Redshift, Databricks, or BigQuery compatibility result.
+title: "backend: "
+labels: ["backend-preview", "needs-triage"]
+body:
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options: ["Amazon Redshift", "Databricks SQL", "Google BigQuery"]
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Sanitized connector and service versions
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Sanitized result
+      description: Never include credentials, account/workspace/project IDs, hosts, SQL, or query data.
+    validations:
+      required: true

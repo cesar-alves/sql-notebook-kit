@@ -1,0 +1,19 @@
+name: Feature proposal
+description: Propose a user-visible capability or contract change.
+title: "proposal: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: decision
+    attributes:
+      label: User decision or workflow
+      description: What should become possible, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed behavior and alternatives
+      description: Include compatibility, security, and migration implications.
+    validations:
+      required: true

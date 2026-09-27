@@ -1,0 +1,193 @@
+name: Release build and TestPyPI rehearsal
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+concurrency:
+  group: release-rehearsal-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-source:
+    name: Release / verify signed tag and source
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      checks: read
+    outputs:
+      version: ${{ steps.source.outputs.version }}
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - id: source
+        name: Verify annotated signed tag, main merge commit, version, and required CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          ref_json=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}")
+          test "$(jq -r '.object.type' <<<"$ref_json")" = tag
+          tag_object=$(jq -r '.object.sha' <<<"$ref_json")
+          tag_json=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}")
+          jq -e '.verification.verified == true' <<<"$tag_json" >/dev/null
+          commit=$(jq -r '.object.sha' <<<"$tag_json")
+          test "$commit" = "$(git rev-parse origin/main)"
+          test "$(git rev-list --parents -n 1 "$commit" | wc -w)" -ge 3
+          uv run python scripts/release_policy.py version "$version"
+          checks=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${commit}/check-runs?per_page=100")
+          for name in \
+            "CI / compact Linux" \
+            "CI / Python 3.11" \
+            "CI / Python 3.12" \
+            "CI / Python 3.13" \
+            "CI / frontend and docs depth" \
+            "CI / packaging" \
+            "CI / macOS wheel smoke" \
+            "CI / Windows wheel smoke" \
+            "CI / security and licenses"; do
+            jq -e --arg name "$name" \
+              '[.check_runs[] | select(.name == $name and .conclusion == "success")] | length > 0' \
+              <<<"$checks" >/dev/null
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+  build-once:
+    name: Release / build immutable bundle
+    needs: verify-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.verify-source.outputs.commit }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: uv sync --frozen --all-extras
+      - run: pnpm install --frozen-lockfile
+      - run: uv run python scripts/check_notebooks.py
+      - name: Execute the credential-free quickstart
+        run: >-
+          uv run --group frontend jupyter nbconvert
+          --to notebook --execute examples/quickstart.ipynb
+          --output /tmp/sql-notebook-kit-quickstart.ipynb
+          --ExecutePreprocessor.timeout=120
+      - run: pnpm check && pnpm test && pnpm build:artifacts
+      - run: git diff --exit-code -- sql_notebook_kit/labextension sql_notebook_kit/vscode
+      - run: mkdir -p release/python release/assets release/evidence
+      - run: uv build --out-dir release/python
+      - run: uv run twine check --strict release/python/*
+      - run: uv run python scripts/check_artifacts.py release/python
+      - run: uv run python scripts/build_from_sdist.py release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}.tar.gz --expected-version ${{ needs.verify-source.outputs.version }} --output /tmp/sdist-wheel
+      - run: >-
+          uv run python scripts/isolated_install.py
+          release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}-py3-none-any.whl
+          --sdist release/python/sql_notebook_kit-${{ needs.verify-source.outputs.version }}.tar.gz
+          --expected-version ${{ needs.verify-source.outputs.version }}
+      - run: uvx --from pip-licenses==5.5.5 pip-licenses --python=.venv/bin/python --format=json --with-urls --output-file=release/evidence/python-licenses.json
+      - run: pnpm licenses list --json > release/evidence/javascript-licenses.json
+      - run: uv run python scripts/check_license_report.py --ecosystem pypi --report release/evidence/python-licenses.json
+      - run: uv run python scripts/check_license_report.py --ecosystem npm --report release/evidence/javascript-licenses.json
+      - name: Generate sanitized artifact-bound SBOMs
+        env:
+          VERSION: ${{ needs.verify-source.outputs.version }}
+        run: |
+          uv run python scripts/license_report_to_sbom.py \
+            --ecosystem pypi \
+            --report release/evidence/python-licenses.json \
+            --project-version "$VERSION" \
+            --artifact "release/python/sql_notebook_kit-${VERSION}-py3-none-any.whl" \
+            --artifact "release/python/sql_notebook_kit-${VERSION}.tar.gz" \
+            --output release/assets/python.cdx.json
+          uv run python scripts/license_report_to_sbom.py \
+            --ecosystem npm \
+            --report release/evidence/javascript-licenses.json \
+            --project-version "$VERSION" \
+            --artifact "release/python/sql_notebook_kit-${VERSION}-py3-none-any.whl" \
+            --artifact "release/python/sql_notebook_kit-${VERSION}.tar.gz" \
+            --output release/assets/javascript.cdx.json
+      - run: uvx --from check-jsonschema==0.38.0 check-jsonschema --schemafile https://cyclonedx.org/schema/bom-1.6.schema.json release/assets/*.cdx.json
+      - run: cp sql_notebook_kit/vscode/sql-notebook-kit-vscode.vsix release/assets/
+      - name: Bind every release asset to SHA-256
+        working-directory: release
+        run: sha256sum python/* assets/* > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-bundle-${{ github.ref_name }}
+          path: release/
+          retention-days: 30
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: Release / publish to TestPyPI
+    needs: [verify-source, build-once]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/sql-notebook-kit/${{ needs.verify-source.outputs.version }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.verify-source.outputs.commit }}
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-bundle-${{ github.ref_name }}
+          path: release
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: release/python/
+          attestations: false
+
+  testpypi-smoke:
+    name: Release / install and smoke from TestPyPI
+    needs: [verify-source, publish-testpypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.verify-source.outputs.commit }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+      - name: Install exact TestPyPI release and smoke outside checkout
+        env:
+          VERSION: ${{ needs.verify-source.outputs.version }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            python -m pip install --no-cache-dir \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              "sql-notebook-kit[duckdb,viz]==${VERSION}" && break
+            test "$attempt" -lt 6
+            sleep 20
+          done
+          smoke_dir=$(mktemp -d)
+          cd "$smoke_dir"
+          python "$GITHUB_WORKSPACE/scripts/installed_smoke.py" --expected-version "$VERSION"

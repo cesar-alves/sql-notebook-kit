@@ -13,10 +13,12 @@ __pycache__/
 htmlcov/
 dist/
 site/
+/release/
 node_modules/
 frontend/*/lib/
 frontend/*/dist/
 *.vsix
+.release_artifacts/
 
 # Virtual environments
 .venv/

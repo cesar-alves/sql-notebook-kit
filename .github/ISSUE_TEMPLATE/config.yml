@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/cesar-alves/sql-notebook-kit/security/advisories/new
+    about: Report vulnerabilities privately; never place secrets in an issue.
+  - name: Support guidance
+    url: https://github.com/cesar-alves/sql-notebook-kit/blob/main/SUPPORT.md
+    about: Choose the right route for questions, bugs, proposals, and preview backends.
