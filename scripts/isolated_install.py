@@ -125,7 +125,7 @@ def main() -> int:
         # Both user-controlled values were constrained above; each remains one argv
         # element, and subprocess never invokes a shell.
         subprocess.run(
-            [
+            [  # nosemgrep
                 str(python),
                 "-m",
                 "pip",
@@ -134,7 +134,7 @@ def main() -> int:
                 "jupyterlab>=4,<5",
                 "nbconvert>=7,<8",
                 "ipykernel>=6",
-            ],  # nosemgrep
+            ],
             check=True,
             env=restricted_environment,
         )

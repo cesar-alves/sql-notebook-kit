@@ -140,6 +140,8 @@ def test_platform_smokes_install_the_shipped_visualization_stack():
     assert "lets-plot" not in workflow
     assert "ipywidgets nbformat plotly jupyterlab" in workflow
     assert "'sqlframe[duckdb]'" in workflow
+    assert "working-directory: ${{ runner.temp }}" in workflow
+    assert '"${{ github.workspace }}/scripts/installed_smoke.py"' in workflow
 
 
 def test_merge_ready_and_release_jobs_execute_the_public_quickstart():
