@@ -38,54 +38,54 @@ dependencies = [
 redshift = [
     "sqlalchemy-redshift>=1.0.0,<2.0",
     "redshift-connector>=2.1.3,<3.0",
-    "sqlframe[redshift]>=4.3,<4.4",
+    "sqlframe[redshift]>=4.3,<4.5",
 ]
 viz = [
     "ipywidgets>=8,<9",
     "nbformat>=5.10,<6",
     "pandas>=3.0.5,<4",
-    "plotly>=5.24,<7",
+    "plotly>=5.24,<8",
 ]
 transform = [
     "pandas>=3.0.5,<4",
-    "sqlframe>=4.3,<4.4",
+    "sqlframe>=4.3,<4.5",
 ]
 duckdb = [
     "duckdb>=1.4,<2",
     "duckdb-engine>=0.17,<1",
     "pandas>=3.0.5,<4",
-    "sqlframe[duckdb]>=4.3,<4.4",
+    "sqlframe[duckdb]>=4.3,<4.5",
 ]
 databricks = [
     "databricks-sql-connector[pyarrow]>=3.6,<5",
     "databricks-sqlalchemy>=2,<3",
     "pandas>=3.0.5,<4",
-    "sqlframe[databricks]>=4.3,<4.4",
+    "sqlframe[databricks]>=4.3,<4.5",
 ]
 bigquery = [
     "google-cloud-bigquery[pandas]>=3,<4",
     "google-cloud-bigquery-storage>=2,<3",
     "sqlalchemy-bigquery>=1.12,<2",
     "pandas>=3.0.5,<4",
-    "sqlframe[bigquery]>=4.3,<4.4",
+    "sqlframe[bigquery]>=4.3,<4.5",
 ]
 all = [
     "sqlalchemy-redshift>=1.0.0,<2.0",
     "redshift-connector>=2.1.3,<3.0",
-    "sqlframe[redshift]>=4.3,<4.4",
+    "sqlframe[redshift]>=4.3,<4.5",
     "ipywidgets>=8,<9",
     "nbformat>=5.10,<6",
     "pandas>=3.0.5,<4",
-    "plotly>=5.24,<7",
+    "plotly>=5.24,<8",
     "duckdb>=1.4,<2",
     "duckdb-engine>=0.17,<1",
-    "sqlframe[duckdb]>=4.3,<4.4",
+    "sqlframe[duckdb]>=4.3,<4.5",
     "databricks-sql-connector[pyarrow]>=3.6,<5",
     "databricks-sqlalchemy>=2,<3",
     "google-cloud-bigquery[pandas]>=3,<4",
     "google-cloud-bigquery-storage>=2,<3",
     "sqlalchemy-bigquery>=1.12,<2",
-    "sqlframe[databricks,bigquery]>=4.3,<4.4",
+    "sqlframe[databricks,bigquery]>=4.3,<4.5",
 ]
 
 [project.urls]
@@ -107,17 +107,17 @@ dev = [
     "build>=1.2",
     "twine>=6.0",
     "pandas>=3.0.5,<4",
-    "plotly>=5.24,<7",
+    "plotly>=5.24,<8",
     "ipywidgets>=8,<9",
     "nbformat>=5.10,<6",
     "playwright>=1.50,<2",
     "duckdb>=1.4,<2",
     "duckdb-engine>=0.17,<1",
-    "sqlframe[duckdb]>=4.3,<4.4",
+    "sqlframe[duckdb]>=4.3,<4.5",
 ]
 docs = [
     "mkdocs>=1.6,<2",
-    "mkdocstrings[python]>=0.27,<1",
+    "mkdocstrings[python]>=0.27,<2",
     "mike>=2.1,<3",
 ]
 frontend = [
@@ -214,5 +214,5 @@ fail_under = 75
 show_missing = true
 
 [build-system]
-requires = ["hatchling==1.31.0"]
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
