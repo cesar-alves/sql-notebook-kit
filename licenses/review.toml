@@ -3,10 +3,12 @@
 
 [overrides]
 "khroma" = "MIT"
+"google-crc32c" = "Apache-2.0"
 "@vscode/vsce-sign" = "Microsoft Visual Studio Tools License (build-only)"
 "@vscode/vsce-sign-linux-x64" = "Microsoft Visual Studio Tools License (build-only)"
 
 [rationale]
 "khroma" = "Package metadata omits the license field; its installed license file is MIT."
+"google-crc32c" = "The locked 1.8.0 wheel reports UNKNOWN, while the upstream v1.8.0 LICENSE is Apache-2.0."
 "@vscode/vsce-sign" = "Used only by the VSIX packaging tool and absent from shipped artifacts. Its installed license restricts redistribution, so it must remain build-only."
 "@vscode/vsce-sign-linux-x64" = "Platform helper for the build-only VSIX signing package; absent from shipped artifacts and not redistributed."

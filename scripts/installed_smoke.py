@@ -28,10 +28,8 @@ def main() -> int:
     subprocess.run(
         [sys.executable, "-m", "sql_notebook_kit.cli", "vscode", "path"], check=True
     )
-    jupyter_name = "jupyter.exe" if sys.platform == "win32" else "jupyter"
-    jupyter = Path(sys.executable).with_name(jupyter_name)
     discovered = subprocess.run(
-        [str(jupyter), "labextension", "list"],
+        [sys.executable, "-m", "jupyter", "labextension", "list"],
         check=False,
         capture_output=True,
         text=True,

@@ -133,3 +133,10 @@ def test_isolated_wheel_validation_executes_both_documented_notebooks():
     assert '"--execute"' in validation
     assert '"executed-quickstart.ipynb"' in validation
     assert '"executed-duckdb.ipynb"' in validation
+
+
+def test_installed_wheel_smoke_invokes_jupyter_via_active_python():
+    validation = (ROOT / "scripts" / "installed_smoke.py").read_text()
+
+    assert '[sys.executable, "-m", "jupyter", "labextension", "list"]' in validation
+    assert 'with_name("jupyter.exe")' not in validation
