@@ -39,13 +39,60 @@ def test_security_jobs_validate_cyclonedx_sboms():
         assert "python.cdx.json javascript.cdx.json" in workflow
 
 
-def test_pull_request_ci_does_not_duplicate_feature_push_runs():
+def test_required_ci_runs_for_pull_requests_and_main_pushes_only():
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     trigger = workflow.split("permissions:", 1)[0]
     assert "pull_request:" in trigger
-    assert re.search(r"^\s+push:", trigger, re.M) is None
+    assert "push:\n    branches: [main]" in trigger
+    assert "pull_request:\n    branches: [develop, main]" in trigger
+    assert "github.event.pull_request.number || github.ref" in workflow
     assert "cancel-in-progress: true" in workflow
     assert "ci:merge-ready" in workflow
+
+
+def test_main_push_runs_every_check_required_by_the_tag_rehearsal():
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    rehearsal = (
+        ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+    ).read_text()
+
+    assert workflow.count(
+        "if: github.event_name == 'push' || "
+        "contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')"
+    ) == 5
+    expected_checks = (
+        "CI / compact Linux",
+        "CI / Python 3.11",
+        "CI / Python 3.12",
+        "CI / Python 3.13",
+        "CI / frontend and docs depth",
+        "CI / packaging",
+        "CI / macOS wheel smoke",
+        "CI / Windows wheel smoke",
+        "CI / security and licenses",
+    )
+    for check in expected_checks:
+        assert f'"{check}"' in rehearsal
+    for job_name in (
+        "CI / compact Linux",
+        "CI / Python ${{ matrix.python }}",
+        "CI / frontend and docs depth",
+        "CI / packaging",
+        "CI / ${{ matrix.name }} wheel smoke",
+        "CI / security and licenses",
+    ):
+        assert f"name: {job_name}" in workflow
+    for python in ('"3.11"', '"3.12"', '"3.13"'):
+        assert python in workflow
+    for platform in ("macOS", "Windows"):
+        assert f"- name: {platform}" in workflow
+    for step in (
+        "Require a changelog entry for user-facing changes",
+        "Enforce main release branch and manifest policy",
+        "Require merge-ready authorization before review",
+    ):
+        block = workflow.split(f"- name: {step}", 1)[1].split("- name:", 1)[0]
+        assert "if: github.event_name == 'pull_request'" in block
 
 
 def test_production_is_manual_only_and_reuses_source_run_artifacts():

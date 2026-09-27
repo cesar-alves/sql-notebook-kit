@@ -1,12 +1,14 @@
-name: Pull request CI
+name: Required CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [develop, main]
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, labeled, unlabeled]
 
 concurrency:
-  group: pr-ci-${{ github.event.pull_request.number }}
+  group: required-ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -48,17 +50,20 @@ jobs:
       - run: uv run --group docs mkdocs build --strict
       - run: uv run python scripts/check_notebooks.py
       - name: Require a changelog entry for user-facing changes
+        if: github.event_name == 'pull_request'
         env:
           RELEASE_NOTE_EXEMPT: ${{ contains(github.event.pull_request.labels.*.name, 'release-note:exempt') }}
         run: >-
           uv run python scripts/check_release_notes.py
           --base '${{ github.event.pull_request.base.sha }}'
       - name: Enforce main release branch and manifest policy
+        if: github.event_name == 'pull_request'
         run: >-
           uv run python scripts/release_policy.py pr
           --base '${{ github.base_ref }}'
           --head '${{ github.head_ref }}'
       - name: Require merge-ready authorization before review
+        if: github.event_name == 'pull_request'
         env:
           IS_DRAFT: ${{ github.event.pull_request.draft }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
@@ -71,7 +76,7 @@ jobs:
 
   python-compatibility:
     name: CI / Python ${{ matrix.python }}
-    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
@@ -101,7 +106,7 @@ jobs:
 
   frontend-docs-depth:
     name: CI / frontend and docs depth
-    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -145,7 +150,7 @@ jobs:
 
   packaging:
     name: CI / packaging
-    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -182,7 +187,7 @@ jobs:
 
   platform-smoke:
     name: CI / ${{ matrix.name }} wheel smoke
-    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
     needs: packaging
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -219,7 +224,7 @@ jobs:
 
   security:
     name: CI / security and licenses
-    if: contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci:merge-ready')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
