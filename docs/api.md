@@ -1,5 +1,18 @@
 # API reference
 
+The public Python API is experimental during the 0.x alpha series. Advertised names
+follow the [versioning policy](versioning.md); breaking changes and removals are
+identified in release notes.
+
+Read the installed distribution version without importing an undocumented module
+attribute:
+
+```python
+from importlib.metadata import version
+
+print(version("sql-notebook-kit"))
+```
+
 ## Public package
 
 ::: sql_notebook_kit

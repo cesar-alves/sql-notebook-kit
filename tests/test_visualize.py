@@ -30,6 +30,12 @@ from sql_notebook_kit.visualize import (
 from sql_notebook_kit.visualize.workspace import _copy_frame, _frame_tsv, _table_html
 
 
+@pytest.fixture(autouse=True)
+def _use_notebook_plotly_renderer(monkeypatch):
+    """Keep renderer tests deterministic in shells without a live notebook frontend."""
+    monkeypatch.setattr(pio.renderers, "default", "plotly_mimetype")
+
+
 def test_workspace_root_is_unframed_except_in_forced_colors():
     css = files("sql_notebook_kit.visualize").joinpath("workspace.css").read_text()
     root_rule = css.split("}", maxsplit=1)[0]
@@ -362,6 +368,9 @@ def test_workspace_css_covers_intrinsic_tables_and_dark_editor_controls():
     assert "--jp-widgets-input-background-color: var(--snk-input-bg)" in css
     assert "select option { color-scheme: dark; }" in css
     assert ".snk-dialog-panel" in css
+    assert ".snk-workspace-toolbar > *" in css
+    assert "width: 100%; max-width: 100%; min-width: 0;" in css
+    assert "flex-flow: row wrap !important;" in css
     assert "background: var(--snk-surface-muted) !important" in css
     assert ".snk-viz-workspace.snk-theme-dark" in css
 
@@ -766,6 +775,52 @@ def test_vscode_bridge_accepts_versioned_callback_and_ignores_invalid_payload(mo
     assert timers[0].interval == 45.0
     assert timers[0].started
     assert timers[0].cancelled
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"request_id": "r" * 81},
+        {"session_id": "wrong-session"},
+        {"cell_id": "vscode-notebook-cell:/other#1"},
+        {"operation": "execute"},
+        {"payload": []},
+    ],
+)
+def test_vscode_bridge_rejects_malformed_conflicting_and_misbound_messages(
+    monkeypatch, change
+):
+    from sql_notebook_kit.visualize import protocol
+
+    monkeypatch.setattr(protocol.threading.Timer, "start", lambda _self: None)
+    monkeypatch.setattr("IPython.display.display", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("IPython.display.update_display", lambda *_args, **_kwargs: None)
+    bridge = protocol.VscodePersistenceBridge("vscode-notebook-cell:/example#1")
+    message = {
+        "protocol_version": 1,
+        "request_id": "request",
+        "session_id": bridge.session_id,
+        "cell_id": bridge.cell_id,
+        "operation": "capabilities_result",
+        "payload": {"persistence": True},
+        **change,
+    }
+    encoded = base64.b64encode(json.dumps(message).encode()).decode()
+    protocol._deliver_vscode_response(encoded)
+    assert not bridge.available
+
+
+def test_vscode_bridge_rejects_oversized_message_before_decoding(monkeypatch):
+    from sql_notebook_kit.visualize import protocol
+
+    decoded = []
+    monkeypatch.setattr(
+        protocol.base64,
+        "b64decode",
+        lambda *_args, **_kwargs: decoded.append(True),
+    )
+    protocol._deliver_vscode_response("A" * (protocol.MAX_BRIDGE_BASE64_BYTES + 1))
+    assert decoded == []
 
 
 def _chart_spec(chart_type):

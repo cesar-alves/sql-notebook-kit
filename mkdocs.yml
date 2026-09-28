@@ -7,6 +7,11 @@ nav:
   - Factory contract: factory-contract.md
   - Backends: backends.md
   - Compatibility: compatibility.md
+  - Versioning policy: versioning.md
+  - Architecture: architecture.md
+  - Security model: security-model.md
+  - Distribution artifacts: distribution.md
+  - Release validation: release-validation.md
   - Migration: migration.md
   - SSO guide: sso.md
   - Lazy transformations: transformations.md
@@ -15,6 +20,7 @@ nav:
   - API reference: api.md
 plugins:
   - search
+  - mike
   - mkdocstrings:
       handlers:
         python:
@@ -25,3 +31,6 @@ markdown_extensions:
   - admonition
   - fenced_code
   - tables
+extra:
+  version:
+    provider: mike

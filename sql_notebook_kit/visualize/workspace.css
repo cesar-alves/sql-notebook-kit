@@ -6,7 +6,7 @@
   --snk-warning-text: #4d2d00; --snk-selection-bg: #ddf4ff; --snk-input-bg: #f6f8fa;
   color: var(--snk-text); background: var(--snk-bg); font: inherit;
   border: 0; border-radius: 0; padding: 8px;
-  box-sizing: border-box;
+  box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0;
   --jp-widgets-color: var(--snk-text);
   --jp-widgets-input-color: var(--snk-text);
   --jp-widgets-input-background-color: var(--snk-input-bg);
@@ -45,6 +45,9 @@
 .snk-viz-workspace .snk-workspace-toolbar {
   align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
 }
+.snk-viz-workspace .snk-workspace-toolbar > * {
+  min-width: 0; max-width: 100%;
+}
 .snk-viz-workspace .snk-tab-strip, .snk-viz-workspace .snk-context-actions {
   align-items: center; gap: 0;
 }
@@ -60,7 +63,10 @@
   color: var(--snk-text) !important; background: var(--snk-selection-bg) !important;
   border-color: var(--snk-accent) !important;
 }
-.snk-viz-workspace .snk-context-actions { gap: 4px; }
+.snk-viz-workspace .snk-context-actions {
+  gap: 4px; flex: 1 1 18rem; flex-flow: row wrap !important;
+  justify-content: flex-end; min-width: 0; max-width: 100%;
+}
 .snk-viz-workspace .snk-export-status:empty,
 .snk-viz-workspace .snk-copy-status:empty { display: none; }
 .snk-viz-workspace .snk-export-status,
