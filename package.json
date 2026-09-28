@@ -11,8 +11,8 @@
     "package:vscode": "pnpm --filter sql-notebook-kit-vscode package && uv run --no-project python scripts/normalize_vsix.py frontend/vscode/sql-notebook-kit-vscode-0.1.0.vsix && node frontend/vscode/stage.mjs"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
-    "vitest": "^4.1.11"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
   },
   "pnpm": {
     "overrides": {

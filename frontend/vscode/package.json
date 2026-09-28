@@ -61,11 +61,11 @@
   },
   "dependencies": { "@sql-notebook-kit/protocol": "workspace:*" },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/vscode": "^1.100.0",
+    "@types/node": "^26.6.2",
+    "@types/vscode": "^1.138.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
-    "@vscode/vsce": "^3.6.0",
-    "esbuild": "^0.25.0",
-    "jsdom": "^20.0.3"
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.1.1"
   }
 }
