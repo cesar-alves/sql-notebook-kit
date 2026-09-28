@@ -57,14 +57,16 @@ gh workflow run release-production.yml --ref main \
 The workflow rejects any other dispatch ref, confirms that the successful run belongs
 to the tag's exact commit, downloads its immutable bundle, verifies every hash and
 rejects unlisted bundle files, publishes through the `pypi` trusted-publishing
-environment, and creates the GitHub Release. This dispatch is the human authorization
-record.
+environment, installs and smokes the exact production version from PyPI in a clean
+environment, and only then creates the GitHub Release. The smoke is a separate job so
+an indexing delay can be retried without republishing immutable files. This dispatch
+is the human authorization record.
 
-After publication, install from production PyPI in a clean environment, run the
-documented DuckDB/Jupyter/VSIX smokes, verify release assets and links, merge `main`
-back into `develop` by pull request, and delete the release branch. Only then may a
-maintainer manually make the repository public and enable public-only GitHub security
-features and attestations.
+After the workflow succeeds, independently install from production PyPI in a clean
+environment, verify the documented DuckDB/Jupyter/VSIX paths plus release assets and
+links, merge `main` back into `develop` by pull request, and delete the release branch.
+Only then may a maintainer manually make the repository public and enable public-only
+GitHub security features and attestations.
 
 ## Incorrect releases
 

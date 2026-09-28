@@ -99,9 +99,38 @@ jobs:
           packages-dir: release/python/
           attestations: false
 
+  pypi-smoke:
+    name: Production / install and smoke from PyPI
+    needs: [verify-bundle, publish-pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.verify-bundle.outputs.commit }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+      - name: Install exact production release and smoke outside checkout
+        env:
+          VERSION: ${{ needs.verify-bundle.outputs.version }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            python -m pip install --no-cache-dir \
+              --index-url https://pypi.org/simple/ \
+              "sql-notebook-kit[duckdb,viz]==${VERSION}" && break
+            test "$attempt" -lt 6
+            sleep 20
+          done
+          smoke_dir=$(mktemp -d)
+          cd "$smoke_dir"
+          python "$GITHUB_WORKSPACE/scripts/installed_smoke.py" --expected-version "$VERSION"
+
   github-release:
     name: Production / create GitHub Release
-    needs: [verify-bundle, publish-pypi]
+    needs: [verify-bundle, pypi-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

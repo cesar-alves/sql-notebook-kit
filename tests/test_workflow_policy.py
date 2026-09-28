@@ -147,16 +147,19 @@ def test_production_deploys_versioned_docs_only_after_publish():
 
 def test_production_release_creation_is_retryable_without_republishing_pypi():
     workflow = (ROOT / ".github" / "workflows" / "release-production.yml").read_text()
-    publish = workflow.split("  publish-pypi:", 1)[1].split(
-        "  github-release:", 1
-    )[0]
+    publish = workflow.split("  publish-pypi:", 1)[1].split("  pypi-smoke:", 1)[0]
+    smoke = workflow.split("  pypi-smoke:", 1)[1].split("  github-release:", 1)[0]
     github_release = workflow.split("  github-release:", 1)[1].split(
         "  documentation:", 1
     )[0]
 
     assert "pypa/gh-action-pypi-publish@" in publish
     assert "gh release create" not in publish
-    assert "needs: [verify-bundle, publish-pypi]" in github_release
+    assert "needs: [verify-bundle, publish-pypi]" in smoke
+    assert "--index-url https://pypi.org/simple/" in smoke
+    assert "scripts/installed_smoke.py" in smoke
+    assert "pypa/gh-action-pypi-publish@" not in smoke
+    assert "needs: [verify-bundle, pypi-smoke]" in github_release
     assert "gh release create" in github_release
     assert "pypa/gh-action-pypi-publish@" not in github_release
 
