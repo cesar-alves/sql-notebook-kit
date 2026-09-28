@@ -41,6 +41,7 @@ jobs:
           TAG: ${{ inputs.tag }}
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: |
+          test "$GITHUB_REF" = refs/heads/main
           version="${TAG#v}"
           test "$TAG" = "v${version}"
           ref_json=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}")
@@ -63,6 +64,7 @@ jobs:
           cd release
           sha256sum --check SHA256SUMS
           cd ..
+          uv run python scripts/verify_release_bundle.py release
           uv run python scripts/check_artifacts.py release/python
           uvx --from check-jsonschema==0.38.0 check-jsonschema \
             --schemafile https://cyclonedx.org/schema/bom-1.6.schema.json \

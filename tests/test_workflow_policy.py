@@ -104,6 +104,8 @@ def test_production_is_manual_only_and_reuses_source_run_artifacts():
     assert "gh run download" in workflow
     assert "uv build" not in workflow
     assert "sha256sum --check" in workflow
+    assert "scripts/verify_release_bundle.py release" in workflow
+    assert 'test "$GITHUB_REF" = refs/heads/main' in workflow
     assert 'git checkout --detach "$commit"' in workflow
 
 
@@ -118,6 +120,7 @@ def test_tag_workflow_cannot_publish_to_production_pypi():
     assert "repository-url: https://test.pypi.org/legacy/" in workflow
     assert "environment:\n      name: testpypi" in workflow
     assert "environment:\n      name: pypi" not in workflow
+    assert "scripts/verify_release_bundle.py release" in workflow
 
 
 def test_testpypi_smoke_is_retryable_without_republishing():
