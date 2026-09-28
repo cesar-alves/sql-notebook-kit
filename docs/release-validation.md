@@ -11,8 +11,8 @@ manager reports.
 | macOS wheel | Exact CI wheel install, import, CLI, DuckDB, Jupyter discovery | Release engineer | Pending |
 | Windows wheel | Exact CI wheel install, import, CLI, DuckDB, Jupyter discovery | Release engineer | Pending |
 | JupyterLab browser | Open a notebook, run eager and lazy SQL, render a bounded table, verify stale/conflict/error states | Tester | Pending |
-| VS Code | Install the exact VSIX into Stable and Insiders, run SQL and visualization paths, uninstall cleanly | Tester | Pending |
-| Accessibility | Keyboard-only navigation, visible focus, readable empty/error states, contrast, screen-reader labels | Tester | Pending |
+| VS Code | Exact VSIX in Stable, Insiders, and one remote-style host; lifecycle, persistence, reconnect, themes, fallback, and removal | Tester | Pending |
+| Accessibility | Keyboard-only at 200%/640 px; focus, forced colors, non-color meaning, labels, and announced status | Tester | Pending |
 | DuckDB | Certified suite and quickstart pass | Backend owner | Pending |
 | Redshift preview | Supported auth paths, bounded query, cancel/error behavior | Backend owner | Pending |
 | Databricks preview | Supported auth paths, bounded query, cancel/error behavior | Backend owner | Pending |
@@ -35,6 +35,50 @@ For VS Code, test both Stable and Insiders with an editor executable located in 
 containing spaces. Record the editor versions and VSIX SHA-256. For JupyterLab, record
 the browser and JupyterLab versions and the wheel SHA-256. Finish both matrices by
 uninstalling and confirming that unrelated extensions and user files remain intact.
+
+### VS Code sign-off matrix
+
+Run every row with the exact release VSIX. A remote-style host means SSH, WSL, or a
+development container where the extension and kernel execute remotely; record which
+one was used. Keep the repository private and all notebook data synthetic.
+
+| Case | Stable local | Insiders local | Remote-style |
+| --- | --- | --- | --- |
+| Install or update through `sql-notebook-kit vscode install` from an editor path containing spaces | Pending | Pending | Pending |
+| Activate the renderer and SQL language support in a notebook using Microsoft Jupyter | Pending | Pending | Pending |
+| Run bounded eager SQL, lazy collection, and visualization create/edit/delete | Pending | Pending | Pending |
+| Save, close, reopen, and rerun; verify visualization metadata persists without stale output | Pending | Pending | Pending |
+| Reconnect and replace the kernel; verify the current session recovers and an old widget fails safely | Pending | Pending | Pending |
+| Switch light, dark, and high-contrast themes while a table, chart, and editor are visible | Pending | Pending | Pending |
+| Provoke syntax, stale-revision, and unavailable-renderer states; verify sanitized actionable messages | Pending | Pending | Pending |
+| Uninstall; verify unrelated extensions, notebooks, settings, and user data remain | Pending | Pending | Pending |
+
+Also open the documented browser-only path once and confirm `vscode.dev` is reported
+as unsupported rather than appearing to install or silently degrading. Record the OS,
+editor version, remote mechanism, Python and Jupyter versions, VSIX SHA-256, tester,
+date, and a sanitized evidence link for each column.
+
+### Accessibility sign-off matrix
+
+Complete the following in JupyterLab and VS Code Stable, then repeat the theme-specific
+checks in Insiders and the selected remote-style host:
+
+- Use only the keyboard for table navigation and visualization add, preview, apply,
+  edit, rename, duplicate, delete, cancel, reset, tab selection, and options expansion.
+  Focus must remain visible and return to a predictable control when dialogs close.
+- Repeat the complete editor flow at 200% zoom and at a 640-pixel output width. No
+  required control, validation message, table value, or status may become unreachable.
+- Test light, dark, native high-contrast, and browser forced-colors modes. Selection,
+  validation, truncation, failure, and disabled states must not rely on color alone.
+- With a screen reader or accessibility inspector, verify names, roles, descriptions,
+  relationships, and current selection for inputs, tabs, tables, menus, and buttons.
+- Verify loading, save, conflict, validation, empty-result, truncation, export, and
+  failure status changes are programmatically announced without stealing focus.
+
+Record the assistive technology or inspector, browser/editor versions, zoom and width,
+theme or forced-colors mode, tester, date, outcome, and sanitized evidence link. Any
+keyboard trap, hidden required control, unlabeled action, unannounced blocking error,
+or color-only meaning is a P0 failure.
 
 ## Deferrals and failures
 
