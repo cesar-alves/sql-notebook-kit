@@ -24,10 +24,10 @@
     "@sql-notebook-kit/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@jupyter/builder": "^1.2.1",
-    "@jupyterlab/core-meta": "^4.6.1",
-    "@types/node": "^22.0.0",
-    "css-loader": "^7.1.4",
+    "@jupyter/builder": "^1.2.3",
+    "@jupyterlab/core-meta": "^4.6.4",
+    "@types/node": "^26.6.2",
+    "css-loader": "^7.1.5",
     "style-loader": "^4.0.0"
   },
   "jupyterlab": {
